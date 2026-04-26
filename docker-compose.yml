@@ -3,6 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        APT_MIRROR: mirrors.aliyun.com
+        PIP_INDEX_URL: https://mirrors.aliyun.com/pypi/simple/
+        PIP_TRUSTED_HOST: mirrors.aliyun.com
     container_name: cloudsupport-ai
     ports:
       - "8000:8000"
