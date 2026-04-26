@@ -1,0 +1,21 @@
+services:
+  cloudsupport-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cloudsupport-ai
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      KNOWLEDGE_DIR: /app/knowledge
+      CHROMA_DIR: /app/chroma_data
+      CHROMA_COLLECTION: cloudsupport_kb
+      RAG_TOP_K: 4
+      CHUNK_SIZE: 800
+      CHUNK_OVERLAP: 120
+    volumes:
+      - ./knowledge:/app/knowledge
+      - ./chroma_data:/app/chroma_data
+    restart: unless-stopped

@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CloudSupport AI</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+          "Microsoft YaHei", sans-serif;
+        background: #f4f6f8;
+        color: #17202a;
+      }
+
+      .app {
+        display: flex;
+        flex-direction: column;
+        width: min(920px, 100%);
+        height: 100vh;
+        margin: 0 auto;
+        background: #ffffff;
+        border-left: 1px solid #e6e9ed;
+        border-right: 1px solid #e6e9ed;
+      }
+
+      header {
+        padding: 18px 22px;
+        border-bottom: 1px solid #e6e9ed;
+        background: #ffffff;
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      header p {
+        margin: 6px 0 0;
+        color: #65717e;
+        font-size: 14px;
+      }
+
+      .messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 22px;
+      }
+
+      .message {
+        display: flex;
+        margin-bottom: 16px;
+      }
+
+      .message.user {
+        justify-content: flex-end;
+      }
+
+      .bubble {
+        max-width: 78%;
+        padding: 12px 14px;
+        border-radius: 8px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .user .bubble {
+        background: #1769e0;
+        color: #ffffff;
+      }
+
+      .assistant .bubble {
+        background: #eef2f6;
+        color: #17202a;
+      }
+
+      .meta {
+        margin-top: 10px;
+        color: #65717e;
+        font-size: 12px;
+      }
+
+      form {
+        display: flex;
+        gap: 10px;
+        padding: 16px;
+        border-top: 1px solid #e6e9ed;
+        background: #ffffff;
+      }
+
+      textarea {
+        flex: 1;
+        min-height: 48px;
+        max-height: 140px;
+        resize: vertical;
+        padding: 12px;
+        border: 1px solid #cfd6dd;
+        border-radius: 8px;
+        font: inherit;
+        outline: none;
+      }
+
+      textarea:focus {
+        border-color: #1769e0;
+      }
+
+      button {
+        width: 88px;
+        border: 0;
+        border-radius: 8px;
+        background: #1769e0;
+        color: #ffffff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        background: #aab4bf;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <h1>CloudSupport AI</h1>
+        <p>输入技术问题，系统会调用 RAG 后端生成回答。</p>
+      </header>
+
+      <section id="messages" class="messages">
+        <div class="message assistant">
+          <div class="bubble">你好，请描述你的技术问题。</div>
+        </div>
+      </section>
+
+      <form id="chatForm">
+        <textarea
+          id="questionInput"
+          placeholder="例如：视频播放首帧很慢，应该怎么排查？"
+          required
+        ></textarea>
+        <button id="sendButton" type="submit">发送</button>
+      </form>
+    </main>
+
+    <script>
+      const form = document.getElementById("chatForm");
+      const input = document.getElementById("questionInput");
+      const button = document.getElementById("sendButton");
+      const messages = document.getElementById("messages");
+
+      function addMessage(role, text, meta = "") {
+        const wrapper = document.createElement("div");
+        wrapper.className = `message ${role}`;
+
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+        bubble.textContent = text;
+
+        if (meta) {
+          const metaNode = document.createElement("div");
+          metaNode.className = "meta";
+          metaNode.textContent = meta;
+          bubble.appendChild(metaNode);
+        }
+
+        wrapper.appendChild(bubble);
+        messages.appendChild(wrapper);
+        messages.scrollTop = messages.scrollHeight;
+      }
+
+      async function ask(question) {
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ question }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || `HTTP ${response.status}`);
+        }
+
+        return response.json();
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const question = input.value.trim();
+        if (!question) return;
+
+        addMessage("user", question);
+        input.value = "";
+        button.disabled = true;
+        button.textContent = "处理中";
+
+        try {
+          const result = await ask(question);
+          const meta = `分类：${result.category || "未知"}`;
+          addMessage("assistant", result.answer || "未返回回答。", meta);
+        } catch (error) {
+          addMessage("assistant", `请求失败：${error.message}`);
+        } finally {
+          button.disabled = false;
+          button.textContent = "发送";
+          input.focus();
+        }
+      });
+    </script>
+  </body>
+</html>
