@@ -1,0 +1,4 @@
+{
+  "log_text": "2026-04-28T11:42:17+08:00 user_region=Thailand isp=AIS device=iPhone player_sdk=BytePlusPlayer/1.8.2 url=https://vod.example.com/live/stream.m3u8 status=200 dns_time=120ms tcp_time=180ms tls_time=260ms ttfb=2800ms first_segment=https://vod.example.com/live/seg-102938.ts segment_status=200 segment_size=4.8MB segment_download_time=4200ms cache_status=MISS first_frame_time=7800ms error=first_frame_slow",
+  "question": "Analyze why BytePlus VOD/HLS playback first frame is slow for overseas users."
+}

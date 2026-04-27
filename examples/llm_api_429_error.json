@@ -1,0 +1,8 @@
+{
+  "method": "POST",
+  "url": "https://ark.ap-southeast.byteplusapi.com/api/v3/chat/completions",
+  "status_code": 429,
+  "error_message": "Rate limit exceeded for model endpoint. Please retry later.",
+  "request_id": "req_byteplus_llm_429_20260428_002",
+  "response_body": "{\"error\":{\"code\":\"TooManyRequests\",\"message\":\"RPM/TPM quota exceeded for current workspace.\"}}"
+}

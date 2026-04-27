@@ -1,206 +1,284 @@
 # CloudSupport AI
 
-CloudSupport AI 是一个面向云产品技术支持场景的 AI 助手项目。系统基于 FastAPI、LangChain、Chroma 和大模型 API 构建，支持用户输入技术问题后自动分类、检索本地知识库、生成结构化排障答案，并提供 HTTP 日志分析能力。
+CloudSupport AI 是一个面向 **云产品与大模型产品一线技术支持** 的 AI 助手演示项目。项目模拟技术支持工程师的日常工作流：接收客户问题、进行工单分诊、检索知识库、分析 API 报错、分析 HTTP 日志，并生成面向海外客户的英文回复草稿。
 
-该项目适合作为 AI 应用工程、RAG 系统设计、后端架构和技术支持自动化方向的面试展示项目。
+本项目使用模拟样例内容，主要用于展示 AI 技术支持、云计算技术支持、大模型技术支持和海外技术支持岗位所需的工程理解与排障思路。
+
+## 适合岗位
+
+- AI 技术支持工程师
+- 云计算技术支持工程师
+- 大模型技术支持工程师
+- 海外技术支持 / Technical Support Engineer
+- RAG 应用工程 / AI Solution Support 相关岗位
+
+## 技术栈
+
+- Backend: `Python`, `FastAPI`, `Pydantic`
+- RAG: `LangChain`, `Chroma`, `Embedding`, `Top-K Retrieval`
+- LLM Integration: `OpenAI / Qwen compatible API`
+- Prompt: `Prompt Engineering`, `结构化输出`, `防幻觉约束`
+- DevOps: `Docker`, `docker-compose`
+- API Testing: `Postman`, `curl`
+- Knowledge Base: Markdown 技术支持知识库
+
+## 核心能力
+
+| 能力 | 接口 | 说明 |
+| --- | --- | --- |
+| 健康检查 | `GET /health` | 检查服务是否可用 |
+| RAG 问答 | `POST /chat` | 基于知识库检索并生成技术支持回答 |
+| 工单分诊 | `POST /ticket-triage` | 判断问题类别、优先级、分派团队和缺失信息 |
+| API 报错分析 | `POST /api-debug` | 分析 401、403、429、5xx 等 API 调用失败 |
+| HTTP 日志分析 | `POST /log-analyze` | 分析 499、502、504、timeout 等日志问题 |
+| 英文客户回复 | `POST /ticket-reply` | 生成专业、清晰的英文/客户沟通回复草稿 |
 
 ## 技术架构
 
 ```mermaid
 flowchart LR
-    User["用户 / 技术支持工程师"] --> Frontend["HTML + JavaScript 前端"]
-    Frontend --> API["FastAPI /chat API"]
+    User["Support Engineer / Interviewer"] --> API["FastAPI Backend"]
 
-    API --> Classifier["问题分类器<br/>CDN / DNS / HTTPS / 视频播放 / Kubernetes / 其他"]
-    API --> RAG["RAG Service"]
-    API --> LogAnalyzer["日志分析模块"]
+    API --> Triage["Ticket Triage<br/>Rule-based fallback"]
+    API --> Debug["API Debug<br/>Status code analysis"]
+    API --> Logs["HTTP Log Analysis<br/>502 / 504 / 499"]
+    API --> Reply["Ticket Reply Draft"]
+    API --> Chat["RAG Chat"]
 
-    RAG --> Loader["文档加载<br/>TXT / PDF"]
-    Loader --> Splitter["文档切分<br/>chunk_size / overlap"]
-    Splitter --> Embedding["Embedding 向量化<br/>OpenAI / Qwen"]
-    Embedding --> Chroma["Chroma 向量数据库"]
-    Chroma --> Retriever["Top-K 相似度检索"]
-    Retriever --> Prompt["Prompt Manager<br/>防幻觉 / 结构化输出"]
-    Prompt --> LLM["LLM<br/>OpenAI / Qwen"]
-    LLM --> API
+    Chat --> Classifier["Question Classifier"]
+    Chat --> Retriever["LangChain Retriever"]
+    Retriever --> Chroma["Chroma Vector DB"]
+    Retriever --> KB["Markdown Knowledge Base"]
+    Chat --> Prompt["Prompt Manager"]
+    Prompt --> LLM["OpenAI / Qwen API"]
 
-    LogAnalyzer --> LLM
-    API --> Response["结构化 JSON 响应"]
+    API --> JSON["Structured JSON Response"]
 ```
 
-## 功能说明
+## 项目结构
 
-### AI 技术支持问答
+```text
+.
+├── main.py                         # FastAPI 入口与接口定义
+├── rag_service.py                  # RAG 文档加载、切分、检索和问答流程
+├── prompt_manager.py               # Prompt 模板管理
+├── classifier.py                   # 技术问题分类器
+├── log_analyzer.py                 # 日志分析模块
+├── index.html                      # 简单聊天页面
+├── knowledge/                      # Markdown 技术支持知识库
+│   ├── cdn/
+│   ├── dns/
+│   ├── https/
+│   ├── video/
+│   ├── kubernetes/
+│   └── llm/
+├── examples/                       # API 请求样例
+├── postman/                        # Postman Collection
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+├── README.md
+└── README_EN.md
+```
 
-- 提供 `/chat` 接口，接收用户技术问题。
-- 自动识别问题类型，包括 `CDN`、`DNS`、`HTTPS`、`视频播放`、`Kubernetes` 和 `其他`。
-- 基于知识库检索相关内容，并结合大模型生成技术支持答案。
-- 返回结构化 JSON，包含问题分类、回答、检索内容、引用来源和元数据。
+## 知识库目录说明
 
-### RAG 知识库检索
+`knowledge/` 目录提供云计算和大模型技术支持场景的 Markdown 样例，适合被 RAG 模块加载、切分、向量化并写入 Chroma。
 
-- 支持加载本地 `txt` 和 `pdf` 文档。
-- 支持 `chunk_size` 和 `chunk_overlap` 参数配置。
-- 使用 Embedding 模型将文档切片向量化。
-- 使用 Chroma 作为本地持久化向量数据库。
-- 支持 Top-K 相似度检索，并将检索内容拼接进 Prompt。
+```text
+knowledge/
+├── cdn/            # CDN 502/504、cache miss、high TTFB
+├── dns/            # DNS resolution failure
+├── https/          # TLS certificate issue
+├── video/          # first frame slow、HLS playback stutter
+├── kubernetes/     # Pod Pending
+└── llm/            # LLM API errors、Prompt、RAG、Function Calling
+```
 
-### Prompt 管理
+每篇知识库文档通常包含：
 
-- 主问答 Prompt。
-- RAG 增强 Prompt，强调基于上下文回答，降低幻觉。
-- 日志分析 Prompt。
-- 工单分类 Prompt。
-- 统一要求输出合法 JSON，便于前后端集成。
-
-### 日志分析
-
-- 支持输入 HTTP 响应或日志文本。
-- 使用 LLM 分析问题类型、状态码含义、问题原因和排查建议。
-- 内置常见状态码知识：
-  - `502 Bad Gateway`
-  - `504 Gateway Timeout`
-  - `499 Client Closed Request`
+- 适用场景
+- 常见现象
+- 可能原因
+- 排查步骤
+- 客户需要提供的信息
+- 升级专家/研发的条件
 
 ## 快速启动
 
-### 1. 准备环境变量
-
-在项目根目录创建 `.env`：
+### 1. 克隆项目
 
 ```bash
-OPENAI_API_KEY=your_openai_key
+git clone https://github.com/HAHAL/cloudsupport-ai.git
+cd cloudsupport-ai
+```
+
+### 2. 准备环境变量
+
+如果只想查看 `/health`、`/docs`、`/ticket-triage`、`/api-debug`、`/log-analyze`、`/ticket-reply`，可以先创建空 `.env`：
+
+```bash
+touch .env
+```
+
+如果需要完整体验 `/chat` 的 RAG + LLM 回答，需要配置模型 API Key：
+
+```env
 LLM_PROVIDER=openai
 EMBEDDING_PROVIDER=openai
+OPENAI_API_KEY=your_openai_key
 
-# 可选：使用 Qwen / DashScope
+# 或使用 Qwen / DashScope compatible endpoint
 # LLM_PROVIDER=qwen
 # EMBEDDING_PROVIDER=qwen
 # DASHSCOPE_API_KEY=your_dashscope_key
 ```
 
-### 2. 准备知识库
-
-建议目录结构：
-
-```text
-knowledge/
-├── cdn/
-├── dns/
-├── https/
-├── video/
-├── kubernetes/
-└── general/
-```
-
-将 `.txt` 或 `.pdf` 知识库文件放入对应目录。
-
-### 3. Docker 一键启动
+### 3. Docker 启动
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
-服务启动后访问：
+查看服务状态：
+
+```bash
+docker compose ps
+docker compose logs -f
+```
+
+访问接口文档：
 
 ```text
 http://localhost:8000/docs
 ```
 
-### 4. 调用示例
+## curl 示例
+
+### Health Check
+
+```bash
+curl http://localhost:8000/health
+```
+
+### 工单分诊
+
+```bash
+curl -X POST http://localhost:8000/ticket-triage \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "CDN accelerated API returns intermittent 504 in Singapore",
+    "description": "The customer reports 504 through CDN. Nginx log shows request_time=60.001 and upstream_response_time=60.000.",
+    "customer_level": "enterprise",
+    "affected_product": "BytePlus CDN"
+  }'
+```
+
+### API 报错分析
+
+```bash
+curl -X POST http://localhost:8000/api-debug \
+  -H "Content-Type: application/json" \
+  -d '{
+    "method": "POST",
+    "url": "https://ark.ap-southeast.byteplusapi.com/api/v3/chat/completions",
+    "status_code": 429,
+    "error_message": "Rate limit exceeded for model endpoint",
+    "request_id": "req_demo_429"
+  }'
+```
+
+### HTTP 日志分析
+
+```bash
+curl -X POST http://localhost:8000/log-analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "log_text": "status=504 request_time=60.001 upstream_response_time=60.000 error=upstream timed out",
+    "question": "Why does the CDN request return 504?"
+  }'
+```
+
+### 英文客户回复生成
+
+```bash
+curl -X POST http://localhost:8000/ticket-reply \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticket_title": "LLM Function Calling schema validation failed",
+    "ticket_description": "Some requests return tool arguments that fail JSON schema validation.",
+    "analysis_context": "Missing required fields order_id and action_type. Need raw response, schema and request_id.",
+    "customer_name": "Customer"
+  }'
+```
+
+### RAG 问答
 
 ```bash
 curl -X POST http://localhost:8000/chat \
   -H "Content-Type: application/json" \
-  -d '{"question":"视频播放首帧很慢，应该怎么排查？"}'
+  -d '{
+    "question": "CDN cache miss and high TTFB should be troubleshooted from which steps?"
+  }'
 ```
 
-示例响应：
+说明：`/chat` 会初始化 Embedding、Chroma 和 LLM 客户端。没有 API Key 时，建议先使用其他规则兜底接口进行演示。
 
-```json
-{
-  "question": "视频播放首帧很慢，应该怎么排查？",
-  "category": "视频播放",
-  "answer": "...",
-  "retrieved_contents": [],
-  "references": [],
-  "metadata": {
-    "chunk_size": 800,
-    "chunk_overlap": 120,
-    "retrieval_top_k": 4,
-    "has_context": true
-  }
-}
-```
+## Postman 使用说明
 
-## 示例截图
-
-> 面试或项目展示时可替换为真实截图。
-
-### 聊天页面
-
-![聊天页面截图占位](docs/images/chat-demo-placeholder.png)
-
-### API 文档
-
-![API 文档截图占位](docs/images/api-docs-placeholder.png)
-
-### 日志分析结果
-
-![日志分析截图占位](docs/images/log-analysis-placeholder.png)
-
-## 项目亮点
-
-### 1. RAG 工程闭环
-
-项目实现了从文档加载、切分、向量化、入库、检索到答案生成的完整链路，不只是简单调用大模型。知识库可以本地维护，向量数据库持久化，便于扩展到真实企业知识库场景。
-
-### 2. 面向技术支持的排障流程
-
-回答不是泛泛生成文本，而是围绕技术支持场景组织输出，包括问题分类、可能原因、排查步骤、建议动作和缺失信息，更贴近一线支持工程师工作流。
-
-### 3. 防幻觉 Prompt 设计
-
-RAG Prompt 明确要求优先基于检索上下文回答，当上下文不足时说明信息缺口，降低大模型编造配置项、错误码含义或产品能力的风险。
-
-### 4. 日志分析能力
-
-项目独立实现日志分析模块，支持常见 HTTP 状态码解释和排障建议，覆盖 `502`、`504`、`499` 等技术支持高频问题。
-
-### 5. 可扩展架构
-
-模块划分清晰：
-
-- `main.py`: FastAPI 入口
-- `rag_service.py`: RAG 主流程
-- `prompt_manager.py`: Prompt 管理
-- `classifier.py`: 技术问题分类
-- `log_analyzer.py`: 日志分析
-
-后续可扩展多租户知识库、异步任务、对话历史、工单系统集成、RAG 评测和人工反馈闭环。
-
-## 目录结构
+项目提供 Postman Collection：
 
 ```text
-.
-├── main.py
-├── rag_service.py
-├── prompt_manager.py
-├── classifier.py
-├── log_analyzer.py
-├── index.html
-├── requirements.txt
-├── Dockerfile
-├── docker-compose.yml
-└── README.md
+postman/CloudSupport-AI.postman_collection.json
 ```
 
-## 面试讲解建议
+使用方式：
 
-可以从以下几个角度介绍该项目：
+1. 打开 Postman。
+2. 点击 `Import`。
+3. 选择 `postman/CloudSupport-AI.postman_collection.json`。
+4. 确认变量 `base_url`，默认是：
 
-- 为什么技术支持场景适合 RAG，而不是只使用通用大模型。
-- 如何通过分类器将问题路由到不同知识库。
-- 如何设计 chunk 参数、Top-K 检索和 Prompt，平衡召回率与答案准确性。
-- 如何处理大模型幻觉、上下文不足和结构化输出。
-- 如何将日志分析能力接入真实排障流程。
+```text
+http://localhost:8000
+```
+
+示例请求体位于：
+
+```text
+examples/
+├── cdn_504_ticket.json
+├── llm_api_401_error.json
+├── llm_api_429_error.json
+├── video_first_frame_slow.json
+└── english_ticket_reply.json
+```
+
+## 面试讲解重点
+
+### 1. 为什么选择技术支持场景
+
+技术支持问题通常有明确的排障流程、日志证据、状态码语义和知识库文档，适合结合规则系统、RAG 和大模型做辅助分析。
+
+### 2. 为什么不是只调用大模型
+
+项目将工单分诊、API 报错、HTTP 日志等高频问题先用规则兜底，保证没有 API Key 或 LLM 不可用时也能返回稳定结构化结果。RAG 问答再用于需要知识库上下文的场景。
+
+### 3. RAG 链路如何设计
+
+`rag_service.py` 覆盖文档加载、chunk 切分、Embedding、Chroma 入库、Top-K 检索、Prompt 拼接和 LLM 回答。知识库文档按产品线组织，便于后续做分类过滤。
+
+### 4. 如何降低幻觉
+
+Prompt 中要求优先基于 context 回答；如果证据不足，需要输出缺失信息。接口响应也保留 `retrieved_contents` 和 `references`，方便查看答案依据。
+
+### 5. 如何体现海外技术支持能力
+
+示例覆盖英文客户回复、海外区域 CDN/VOD/LLM API 问题，以及面向客户沟通的排查步骤、缺失信息和升级条件。
+
+## 项目边界
+
+- 本项目是面试和学习用途的演示项目。
+- 知识库内容为模拟样例。
+- 规则兜底逻辑用于稳定演示，不替代真实生产系统中的监控、告警、权限、审计和工单流程。
+- `/chat` 的完整 RAG + LLM 能力需要有效的模型 API Key。
