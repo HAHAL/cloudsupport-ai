@@ -1,5 +1,6 @@
 __pycache__/
 *.py[cod]
+*.pyc
 *$py.class
 
 .Python
@@ -10,5 +11,8 @@ env/
 .env
 
 chroma_data/
+chroma_db/
+
+*.log
 
 .DS_Store

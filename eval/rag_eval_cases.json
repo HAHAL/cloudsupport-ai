@@ -1,0 +1,32 @@
+[
+  {
+    "question": "CDN returns intermittent 504, how should we troubleshoot it?",
+    "expected_keywords": [
+      "origin timeout",
+      "upstream response time",
+      "timestamp",
+      "request ID",
+      "origin connectivity"
+    ]
+  },
+  {
+    "question": "LLM API returns 429, what should I check?",
+    "expected_keywords": [
+      "rate limit",
+      "quota",
+      "retry",
+      "exponential backoff",
+      "billing"
+    ]
+  },
+  {
+    "question": "The RAG answer is inaccurate, how can we improve retrieval quality?",
+    "expected_keywords": [
+      "chunk size",
+      "embedding",
+      "top-k",
+      "metadata",
+      "reranking"
+    ]
+  }
+]

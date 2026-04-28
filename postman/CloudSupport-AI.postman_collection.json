@@ -171,7 +171,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"ticket_title\": \"LLM Function Calling schema validation failed in production\",\n  \"ticket_description\": \"The overseas customer is integrating BytePlus LLM Function Calling for an e-commerce customer-service bot. Since yesterday, some requests return tool arguments that fail JSON schema validation. The invalid output usually misses required fields: order_id and action_type. The customer needs an English reply with next troubleshooting steps.\",\n  \"analysis_context\": \"Likely related to complex nested schema, unclear field descriptions, and missing server-side schema validation retry. No request_id has been provided yet. Need model name, SDK version, raw tool call response, schema definition, and failed validation error.\",\n  \"customer_name\": \"Hi BytePlus Support Team\"\n}"
+          "raw": "{\n  \"ticket_title\": \"LLM Function Calling schema validation failed during integration testing\",\n  \"ticket_description\": \"The overseas customer is integrating BytePlus LLM Function Calling for an e-commerce customer-service bot. Since yesterday, some requests return tool arguments that fail JSON schema validation. The invalid output usually misses required fields: order_id and action_type. The customer needs an English reply with next troubleshooting steps.\",\n  \"analysis_context\": \"Likely related to complex nested schema, unclear field descriptions, and missing server-side schema validation retry. No request_id has been provided yet. Need model name, SDK version, raw tool call response, schema definition, and failed validation error.\",\n  \"customer_name\": \"Customer\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/ticket-reply",

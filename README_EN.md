@@ -1,14 +1,20 @@
 # CloudSupport AI
 
-CloudSupport AI is a demo project for **frontline technical support of cloud products and LLM products**. It simulates common support workflows: ticket triage, RAG-based knowledge retrieval, API error diagnosis, HTTP log analysis, and customer reply drafting.
+CloudSupport AI is an **AI Support Copilot prototype** for cloud product and LLM product support scenarios. It simulates common frontline support workflows, including ticket triage, knowledge base retrieval, API error diagnosis, HTTP log analysis, English customer reply drafting, and escalation information collection.
 
-This project uses simulated sample content. It is designed for interview discussion and technical demonstration.
+The project is built with `Python`, `FastAPI`, `Pydantic`, `RAG`, `Prompt Engineering`, `Postman`, and `Docker`. It is designed to demonstrate practical skills required for AI Technical Support Engineer, Cloud Support Engineer, and LLM Support Engineer roles: API debugging, troubleshooting, knowledge base organization, and customer communication.
+
+This is a personal practice demo project. All examples are simulated support scenarios.
+
+## Overview
+
+The backend exposes several structured JSON APIs for technical support workflows. Some APIs use deterministic rule-based fallback logic so that they can run without an LLM API key. The `/chat` endpoint demonstrates a RAG workflow with document loading, chunking, embeddings, Chroma retrieval, prompt construction, and LLM response generation.
 
 ## Target Roles
 
 - AI Technical Support Engineer
-- Cloud Technical Support Engineer
-- LLM Technical Support Engineer
+- Cloud Support Engineer
+- LLM Support Engineer
 - Overseas Technical Support Engineer
 - AI Solution Support Engineer
 
@@ -22,16 +28,28 @@ This project uses simulated sample content. It is designed for interview discuss
 - API Testing: `Postman`, `curl`
 - Knowledge Base: Markdown support documents
 
-## Features
+## Core Features
 
 | Feature | API | Description |
 | --- | --- | --- |
-| Health check | `GET /health` | Check service status |
-| RAG chat | `POST /chat` | Retrieve knowledge base context and generate an answer |
-| Ticket triage | `POST /ticket-triage` | Classify ticket category, priority, team, and missing information |
-| API debugging | `POST /api-debug` | Analyze 401, 403, 429, and 5xx API errors |
-| Log analysis | `POST /log-analyze` | Analyze HTTP logs such as 499, 502, 504, and timeout |
-| Ticket reply | `POST /ticket-reply` | Generate a professional customer reply draft |
+| Health Check | `GET /health` | Check service status |
+| RAG Chat | `POST /chat` | Retrieve support knowledge and generate an answer |
+| Ticket Triage | `POST /ticket-triage` | Classify ticket category, priority, support team, and missing information |
+| API Debug | `POST /api-debug` | Analyze API errors such as 401, 403, 429, and 5xx |
+| Log Analysis | `POST /log-analyze` | Analyze HTTP logs such as 499, 502, 504, and timeout |
+| Ticket Reply | `POST /ticket-reply` | Generate a professional English customer reply draft |
+
+## API Endpoints
+
+| API | Method | Purpose |
+| --- | --- | --- |
+| `/health` | GET | Service health check |
+| `/docs` | GET | Swagger API documentation |
+| `/chat` | POST | RAG-based support Q&A |
+| `/ticket-triage` | POST | Ticket classification and triage |
+| `/api-debug` | POST | API error troubleshooting |
+| `/log-analyze` | POST | HTTP log analysis |
+| `/ticket-reply` | POST | English ticket reply generation |
 
 ## Architecture
 
@@ -42,7 +60,7 @@ flowchart LR
     API --> Triage["Ticket Triage"]
     API --> Debug["API Debug"]
     API --> Logs["HTTP Log Analysis"]
-    API --> Reply["Ticket Reply Draft"]
+    API --> Reply["English Ticket Reply"]
     API --> Chat["RAG Chat"]
 
     Chat --> Classifier["Question Classifier"]
@@ -55,57 +73,6 @@ flowchart LR
     API --> JSON["Structured JSON"]
 ```
 
-## Project Structure
-
-```text
-.
-├── main.py
-├── rag_service.py
-├── prompt_manager.py
-├── classifier.py
-├── log_analyzer.py
-├── index.html
-├── knowledge/
-│   ├── cdn/
-│   ├── dns/
-│   ├── https/
-│   ├── video/
-│   ├── kubernetes/
-│   └── llm/
-├── examples/
-├── postman/
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── README.md
-└── README_EN.md
-```
-
-## Knowledge Base
-
-The `knowledge/` directory contains sample Markdown documents for support scenarios:
-
-- CDN 502/504
-- CDN cache miss and high TTFB
-- DNS resolution failure
-- TLS certificate issue
-- Video first frame slow
-- HLS playback stutter
-- Kubernetes Pod Pending
-- LLM API 401/429/5xx
-- Prompt optimization
-- RAG retrieval quality
-- Function Calling schema invalid
-
-Each document follows a support-oriented structure:
-
-- Applicable scenario
-- Common symptoms
-- Possible causes
-- Troubleshooting steps
-- Information required from the customer
-- Escalation conditions
-
 ## Quick Start
 
 ### 1. Clone
@@ -117,7 +84,7 @@ cd cloudsupport-ai
 
 ### 2. Environment Variables
 
-For rule-based APIs such as `/ticket-triage`, `/api-debug`, `/log-analyze`, and `/ticket-reply`, an empty `.env` file is enough:
+Rule-based APIs can run with an empty `.env` file:
 
 ```bash
 touch .env
@@ -142,92 +109,27 @@ OPENAI_API_KEY=your_openai_key
 docker compose up --build -d
 ```
 
-Check logs:
-
-```bash
-docker compose logs -f
-```
-
-Open API docs:
+Open Swagger:
 
 ```text
 http://localhost:8000/docs
 ```
 
-## curl Examples
+## Postman Usage
 
-### Health Check
-
-```bash
-curl http://localhost:8000/health
-```
-
-### Ticket Triage
-
-```bash
-curl -X POST http://localhost:8000/ticket-triage \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "CDN accelerated API returns intermittent 504 in Singapore",
-    "description": "The customer reports 504 through CDN. Nginx log shows request_time=60.001 and upstream_response_time=60.000.",
-    "customer_level": "enterprise",
-    "affected_product": "BytePlus CDN"
-  }'
-```
-
-### API Debug
-
-```bash
-curl -X POST http://localhost:8000/api-debug \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "POST",
-    "url": "https://ark.ap-southeast.byteplusapi.com/api/v3/chat/completions",
-    "status_code": 429,
-    "error_message": "Rate limit exceeded for model endpoint",
-    "request_id": "req_demo_429"
-  }'
-```
-
-### Log Analysis
-
-```bash
-curl -X POST http://localhost:8000/log-analyze \
-  -H "Content-Type: application/json" \
-  -d '{
-    "log_text": "status=504 request_time=60.001 upstream_response_time=60.000 error=upstream timed out",
-    "question": "Why does the CDN request return 504?"
-  }'
-```
-
-### Ticket Reply
-
-```bash
-curl -X POST http://localhost:8000/ticket-reply \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_title": "LLM Function Calling schema validation failed",
-    "ticket_description": "Some requests return tool arguments that fail JSON schema validation.",
-    "analysis_context": "Missing required fields order_id and action_type. Need raw response, schema and request_id.",
-    "customer_name": "Customer"
-  }'
-```
-
-## Postman
-
-Import this file into Postman:
+Import the collection:
 
 ```text
 postman/CloudSupport-AI.postman_collection.json
 ```
 
-The default variable is:
+Default variable:
 
 ```text
 base_url = http://localhost:8000
 ```
 
-Sample request bodies are available in:
+Sample request bodies:
 
 ```text
 examples/
@@ -238,18 +140,85 @@ examples/
 └── english_ticket_reply.json
 ```
 
+## Knowledge Base
+
+The `knowledge/` directory contains sample support documents:
+
+```text
+knowledge/
+├── cdn/
+├── dns/
+├── https/
+├── video/
+├── kubernetes/
+└── llm/
+```
+
+Covered scenarios include:
+
+- CDN 502/504
+- CDN cache miss and high TTFB
+- DNS resolution failure
+- TLS certificate issue
+- Video first frame slow
+- HLS playback stutter
+- Kubernetes Pod Pending
+- LLM API 401/429/5xx
+- Prompt optimization
+- RAG retrieval quality
+- Function Calling schema errors
+
+Each document follows a support-oriented structure:
+
+- Scenario
+- Symptoms
+- Possible Causes
+- Troubleshooting Steps
+- Required Information
+- Escalation Criteria
+
+## Test Result
+
+See [TEST_RESULT.md](TEST_RESULT.md).
+
+Verified APIs:
+
+- `GET /health`
+- `GET /docs`
+- `POST /chat`
+- `POST /ticket-triage`
+- `POST /api-debug`
+- `POST /log-analyze`
+- `POST /ticket-reply`
+
 ## Interview Talking Points
 
-- Why technical support is a good use case for RAG and rule-based fallback.
-- How ticket triage, API debugging, and log analysis can be modeled as structured JSON APIs.
-- How documents are loaded, split, embedded, stored in Chroma, and retrieved with Top-K search.
-- How prompt rules reduce hallucination by requiring context-based answers and missing-information output.
-- How overseas support scenarios require clear English replies, evidence, and escalation conditions.
+- Why RAG is suitable for technical support scenarios
+- How ticket triage improves first response quality
+- How to troubleshoot LLM API errors such as 401, 429, and 5xx
+- How Prompt Engineering controls output format and reduces hallucination
+- How English ticket replies reduce communication cost for overseas customers
+- How to collect required information before escalating issues
+- What should be added before production use: authentication, rate limiting, monitoring, evaluation, access control, and audit logs
+
+## Limitations and Future Improvements
+
+This project is a personal practice and interview demo project, not a production system.
+
+Future improvements:
+
+- Add authentication and role-based access control
+- Add API rate limiting and request audit logs
+- Add Prometheus and Grafana monitoring
+- Add RAG evaluation dataset and answer quality scoring
+- Add multi-tenant knowledge base isolation
+- Add conversation history and ticket context memory
+- Add CI/CD workflow for automated tests
+- Add persistent ticket storage and search
+- Add frontend UI for support engineers
 
 ## Scope
 
-- This is an interview and learning demo.
-- Knowledge base documents are sample content only.
-- All knowledge base documents and examples are simulated samples.
+- All examples are simulated support scenarios.
 - Rule-based fallback is used for stable demonstration.
 - Full RAG chat requires a valid LLM and embedding API key.

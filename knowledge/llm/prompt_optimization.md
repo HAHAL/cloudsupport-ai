@@ -1,47 +1,48 @@
-# Prompt Optimization 技术支持指南
+# Prompt Optimization Support Guide
 
-## 适用场景
+## Scenario
 
-适用于用户反馈大模型回答不稳定、不按格式输出、幻觉、遗漏约束、回答过长或过短、角色指令不生效等问题。
+This document applies when an LLM response is unstable, does not follow the required format, ignores constraints, produces unsupported facts, or fails to behave consistently in a support workflow.
 
-## 常见现象
+## Symptoms
 
-- 模型没有按 JSON schema 输出。
-- 回答包含上下文没有的事实或虚构配置。
-- 用户问题稍微变化，答案差异很大。
-- 多轮对话中模型忘记前文约束。
-- 提示词很长，但关键指令没有被遵守。
+- The model does not return valid JSON or does not follow the expected schema.
+- The answer includes facts that are not present in the provided context.
+- Small input changes lead to large output differences.
+- The model ignores role instructions or output constraints.
+- The prompt is long, but key requirements are not followed.
+- The response is too verbose, too short, or not suitable for customer-facing support.
 
-## 可能原因
+## Possible Causes
 
-- 系统指令、用户指令和上下文之间存在冲突。
-- 输出格式要求不明确，没有给 schema 或示例。
-- Prompt 中混入大量无关内容，稀释关键约束。
-- RAG 上下文质量差，模型基于错误资料回答。
-- temperature 过高导致输出发散。
-- 没有对模型输出做 JSON 解析和校验兜底。
+- System instructions, user instructions, and context contain conflicting requirements.
+- Output format requirements are vague or do not include a schema.
+- The prompt contains too much unrelated context.
+- RAG context is noisy, outdated, or not relevant to the user question.
+- Temperature is too high for a deterministic support task.
+- There is no server-side JSON validation or retry strategy.
 
-## 排查步骤
+## Troubleshooting Steps
 
-1. 将 Prompt 拆分为角色、任务、约束、输入、输出格式五部分。
-2. 明确要求只输出合法 JSON，不要 Markdown 代码块。
-3. 提供字段说明和一条最小示例。
-4. 移除重复、冲突和无关上下文。
-5. 对事实型问答降低 temperature。
-6. 对结构化输出增加服务端 JSON schema 校验和重试。
-7. 将“无法判断时如何回答”写入规则，减少幻觉。
+1. Split the prompt into role, task, constraints, input, and output format sections.
+2. Clearly state that the model must return only valid JSON when structured output is required.
+3. Provide field descriptions and a minimal example for complex schemas.
+4. Remove repeated, conflicting, or unrelated context from the prompt.
+5. Lower temperature for factual support answers and structured output tasks.
+6. Add server-side JSON parsing, schema validation, and a repair retry when validation fails.
+7. Define how the model should respond when evidence is insufficient.
 
-## 客户需要提供的信息
+## Required Information
 
-- 完整 Prompt 模板。
-- 真实输入样例和异常输出样例。
-- 使用的模型、temperature、max tokens。
-- 是否使用 RAG 上下文和上下文来源。
-- 期望输出 schema 或业务校验规则。
+- Full prompt template, including system and user messages.
+- Input example and unexpected output example.
+- Model name, temperature, max tokens, and SDK version.
+- Whether RAG context is used and what context was retrieved.
+- Expected JSON schema or business validation rules.
 
-## 升级专家/研发的条件
+## Escalation Criteria
 
-- Prompt 已清晰约束，但模型稳定违反安全或格式要求。
-- 相同请求多次输出差异异常大。
-- JSON 模式或 Function Calling 在同一 schema 下持续失败。
-- 疑似模型服务侧回归或版本行为变化。
+- The prompt is clear and minimal, but the model consistently violates the format.
+- Structured output or Function Calling fails with a simple schema.
+- The same prompt behavior changes significantly after a model or SDK update.
+- The issue affects customer-facing support replies or automated support workflows.

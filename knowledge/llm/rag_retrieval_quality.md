@@ -1,49 +1,51 @@
-# RAG Retrieval Quality 排查
+# RAG Retrieval Quality Troubleshooting
 
-## 适用场景
+## Scenario
 
-适用于 RAG 系统检索不到相关知识、召回内容不准、答案引用错误、知识库更新后不生效、相似问题结果差异大等问题。
+This document applies when a RAG system retrieves irrelevant context, misses expected documents, cites the wrong source, or produces inaccurate answers because of poor retrieval quality.
 
-## 常见现象
+## Symptoms
 
-- 用户问题有答案，但 Top-K 检索结果为空或不相关。
-- LLM 答案引用了错误文档。
-- 新增知识库文档后查询不到。
-- 检索结果都是长文档开头，缺少关键段落。
-- 中文问题检索英文文档效果差，或反之。
+- The expected document exists in the knowledge base but is not returned in Top-K results.
+- Retrieved chunks are only loosely related to the question.
+- The answer cites the wrong document or misses the key troubleshooting step.
+- Newly added knowledge base files are not searchable.
+- Similar questions return inconsistent retrieval results.
+- Cross-language queries perform worse than expected.
 
-## 可能原因
+## Possible Causes
 
-- 文档切分 chunk 过大或过小，语义不完整。
-- overlap 不合理，关键上下文被切断。
-- embedding 模型与语言、领域不匹配。
-- 元数据过滤条件错误，例如 category 不一致。
-- Chroma 向量库未重建或持久化目录使用错误。
-- Top-K 太小或相似度阈值过高。
-- 查询改写缺失，用户口语问题与知识库术语不一致。
+- Chunk size is too large or too small, causing incomplete semantic units.
+- Chunk overlap is insufficient and important context is split across chunks.
+- Embedding model is not suitable for the language or technical domain.
+- Metadata filters are too strict or use inconsistent category values.
+- Chroma collection was not rebuilt after knowledge base updates.
+- Top-K is too small or similarity threshold is too high.
+- The user query uses informal wording that does not match knowledge base terminology.
 
-## 排查步骤
+## Troubleshooting Steps
 
-1. 记录原始 question、改写 query、Top-K 结果和相似度分数。
-2. 检查文档是否成功加载、切分和写入向量库。
-3. 随机抽样 chunk，确认 chunk 内容完整且包含标题或来源信息。
-4. 调整 chunk_size、chunk_overlap、Top-K，比较召回变化。
-5. 检查 metadata filter，确认分类、租户、产品线过滤没有误杀。
-6. 对用户问题做 query rewrite，补充产品名、错误码和同义词。
-7. 对知识库新增或修改后重建 Chroma 索引。
+1. Log the original question, rewritten query, Top-K chunks, similarity scores, and metadata.
+2. Confirm that documents were loaded, split, embedded, and written to the expected Chroma collection.
+3. Inspect sample chunks to verify that each chunk contains enough context and source metadata.
+4. Tune chunk_size, chunk_overlap, Top-K, and similarity threshold.
+5. Check metadata filters such as category, tenant, product, language, or region.
+6. Add query rewriting to expand abbreviations, product names, error codes, and synonyms.
+7. Consider reranking when Top-K recall is acceptable but ordering is poor.
+8. Rebuild the vector index after changing embedding model or chunking strategy.
 
-## 客户需要提供的信息
+## Required Information
 
-- 查询问题、期望命中的文档和实际 Top-K 结果。
-- chunk_size、chunk_overlap、Top-K、相似度阈值。
-- embedding 模型名称和向量库 collection。
-- 文档源文件和入库日志。
-- metadata filter 条件。
-- 是否近期更新知识库或切换 embedding 模型。
+- User question and expected document.
+- Actual Top-K results, scores, and metadata.
+- chunk_size, chunk_overlap, Top-K, and similarity threshold.
+- Embedding model name and Chroma collection name.
+- Knowledge base source file and ingestion logs.
+- Metadata filter conditions.
 
-## 升级专家/研发的条件
+## Escalation Criteria
 
-- 向量库确认包含正确 chunk，但相似度排序明显异常。
-- 同一 embedding 模型在批量评测中召回率显著下降。
-- Chroma 持久化或 collection 读写行为异常。
-- 检索服务出现数据串租户或权限过滤失效风险。
+- The correct chunk exists in Chroma but is consistently ranked very low.
+- Retrieval quality drops after changing embedding model, chunking, or index version.
+- Metadata filtering may cause cross-tenant leakage or missing authorized content.
+- Chroma persistence, collection loading, or vector write behavior appears inconsistent.

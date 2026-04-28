@@ -124,57 +124,57 @@ class TicketReplyResponse(BaseModel):
 STATUS_CODE_KNOWLEDGE: dict[int, dict[str, Any]] = {
     400: {
         "type": "bad_request",
-        "explanation": "请求参数、请求体格式或 Header 不符合服务端要求。",
-        "causes": ["参数缺失或类型错误", "JSON 格式不合法", "签名字段或 Header 缺失"],
-        "steps": ["核对 API 文档中的必填字段", "检查 Content-Type 和请求体格式", "保留 request_id 便于服务端查询"],
+        "explanation": "400 Bad Request means the request parameters, body, or headers do not match the API contract.",
+        "causes": ["Missing or invalid parameters", "Invalid JSON payload", "Required headers or signature fields are missing"],
+        "steps": ["Compare the request with the API documentation", "Verify Content-Type, JSON format, and required fields", "Keep the request ID for server-side log lookup"],
     },
     401: {
         "type": "auth_failed",
-        "explanation": "请求未通过身份认证。",
-        "causes": ["Token 过期或无效", "AccessKey/SecretKey 错误", "鉴权 Header 未传递"],
-        "steps": ["重新生成或刷新 Token", "检查 AK/SK 和签名算法", "确认请求时间没有明显偏差"],
+        "explanation": "401 Unauthorized means the request did not pass authentication.",
+        "causes": ["Invalid or expired API key/token", "Incorrect AccessKey/SecretKey or signature", "Authorization header is missing or malformed"],
+        "steps": ["Verify that the API key is loaded in the runtime environment", "Check the model or endpoint permission for the key", "Confirm the base URL, timestamp, and signature algorithm"],
     },
     403: {
         "type": "permission_denied",
-        "explanation": "认证通过，但当前身份没有访问该资源或操作的权限。",
-        "causes": ["账号权限不足", "资源策略限制", "IP 白名单或安全策略拦截"],
-        "steps": ["检查 RAM/IAM 权限策略", "确认资源归属账号和地域", "检查安全组、白名单和访问控制策略"],
+        "explanation": "403 Forbidden means the identity is authenticated but not authorized for the requested resource or operation.",
+        "causes": ["Insufficient IAM/RAM permission", "Resource policy restriction", "IP allowlist, firewall, or access-control policy blocked the request"],
+        "steps": ["Check IAM/RAM policies and workspace permissions", "Confirm the resource owner, region, and project", "Review allowlist, security group, and access-control rules"],
     },
     404: {
         "type": "not_found",
-        "explanation": "请求路径、资源 ID 或路由不存在。",
-        "causes": ["URL 路径错误", "资源已删除或地域不匹配", "服务未配置对应路由"],
-        "steps": ["确认接口路径和 HTTP 方法", "检查资源 ID、地域和环境", "访问 /docs 确认后端实际暴露的接口"],
+        "explanation": "404 Not Found means the route, resource ID, or API path cannot be found.",
+        "causes": ["Incorrect URL path or HTTP method", "Resource does not exist or belongs to another region", "The backend service does not expose the requested route"],
+        "steps": ["Verify the API path and method", "Check resource ID, region, and environment", "Use /docs to confirm available backend endpoints"],
     },
     429: {
         "type": "rate_limited",
-        "explanation": "请求触发限流或配额限制。",
-        "causes": ["QPS 超过限制", "并发过高", "账号额度或模型调用配额不足"],
-        "steps": ["降低重试频率并加入指数退避", "查看配额和限流策略", "申请扩容或拆分流量"],
+        "explanation": "429 Too Many Requests means the request hit a rate limit, quota limit, or concurrency limit.",
+        "causes": ["RPM/TPM/QPS limit exceeded", "Concurrent requests are too high", "Workspace quota, billing, or model entitlement is insufficient"],
+        "steps": ["Add retry with exponential backoff and jitter", "Check RPM/TPM/QPS, quota, and billing status", "Reduce concurrency or request a quota increase"],
     },
     500: {
         "type": "server_error",
-        "explanation": "服务端内部错误。",
-        "causes": ["应用异常", "依赖服务异常", "配置或环境变量缺失"],
-        "steps": ["查看服务端日志和异常堆栈", "按 request_id 查询链路日志", "检查数据库、缓存、LLM API 等依赖状态"],
+        "explanation": "500 Internal Server Error means the backend encountered an unexpected error.",
+        "causes": ["Application exception", "Dependency failure", "Missing runtime configuration or environment variable"],
+        "steps": ["Check backend logs and exception stack traces", "Use request ID to query service-side traces", "Verify database, cache, gateway, and LLM API dependencies"],
     },
     502: {
         "type": "upstream_error",
-        "explanation": "网关或代理从上游服务收到了无效响应。",
-        "causes": ["源站服务不可用", "上游连接被拒绝或重置", "负载均衡后端不健康", "HTTPS 回源握手失败"],
-        "steps": ["检查源站进程、端口和健康检查", "确认网关到上游网络连通性", "核对回源协议、Host、SNI 和证书配置"],
+        "explanation": "502 Bad Gateway means the gateway or CDN received an invalid response from the origin or upstream service.",
+        "causes": ["Origin service is unavailable", "Upstream connection was refused or reset", "Load balancer backend is unhealthy", "HTTPS back-to-origin handshake failed"],
+        "steps": ["Check origin process, listening port, and health check status", "Verify CDN or gateway connectivity to the origin", "Review origin protocol, Host header, SNI, and certificate configuration"],
     },
     504: {
         "type": "gateway_timeout",
-        "explanation": "网关或代理等待上游服务响应超时。",
-        "causes": ["源站响应慢", "上游网络超时", "数据库或第三方依赖耗时高", "代理超时时间过短"],
-        "steps": ["对比 request_time 和 upstream_response_time", "检查应用慢日志和依赖服务耗时", "评估网关、CDN、负载均衡超时配置"],
+        "explanation": "504 Gateway Timeout means the CDN, gateway, or load balancer timed out while waiting for the origin response.",
+        "causes": ["Origin response latency is high", "Upstream network timeout or packet loss", "Database/cache/third-party dependency is slow", "Gateway or CDN timeout is shorter than origin processing time"],
+        "steps": ["Compare request_time and upstream_response_time", "Check application slow logs and dependency latency", "Verify origin connectivity and evaluate CDN/gateway timeout settings"],
     },
     499: {
         "type": "client_abort",
-        "explanation": "客户端在服务端返回响应前主动断开连接，常见于 Nginx 日志。",
-        "causes": ["客户端超时", "用户取消请求", "弱网或代理中断", "服务端响应慢导致客户端放弃等待"],
-        "steps": ["检查客户端超时设置", "分析服务端请求耗时", "按地域、运营商、客户端版本聚合 499 分布"],
+        "explanation": "499 Client Closed Request means the client closed the connection before the server returned a response, commonly seen in Nginx logs.",
+        "causes": ["Client-side timeout", "User or client canceled the request", "Weak network or proxy interruption", "Server response was too slow and the client gave up"],
+        "steps": ["Compare client timeout with request_time and upstream_response_time", "Check client SDK/browser logs", "Aggregate 499 errors by region, ISP, and client version"],
     },
 }
 
@@ -204,7 +204,7 @@ def chat(payload: ChatRequest) -> ChatResponse:
 def ticket_triage(payload: TicketTriageRequest) -> TicketTriageResponse:
     """Classify and route a cloud support ticket using stable rules."""
     text = f"{payload.title}\n{payload.description}\n{payload.affected_product or ''}"
-    category = QuestionClassifier().classify(text).value
+    category = _infer_support_category(text)
     status_codes = _extract_status_codes(text)
     keywords = _matched_keywords(text)
     priority = _infer_priority(text, status_codes, payload.customer_level)
@@ -215,7 +215,7 @@ def ticket_triage(payload: TicketTriageRequest) -> TicketTriageResponse:
         priority=priority,
         intent=intent,
         assigned_team=_assigned_team(category),
-        reason=f"根据标题和描述中的关键词命中 {category} 场景，优先级按影响范围、状态码和客户等级规则评估。",
+        reason=_triage_reason(category, keywords, status_codes, priority),
         keywords=keywords,
         missing_info=_missing_info_for_support(text, category),
         next_actions=_next_actions_for_category(category, status_codes),
@@ -245,7 +245,7 @@ def api_debug(payload: ApiDebugRequest) -> ApiDebugResponse:
         status_code_explanation=(
             f"{status_code}: {knowledge['explanation']}"
             if status_code and knowledge
-            else "未提供明确状态码，请结合错误信息和服务端日志继续定位。"
+            else "No explicit HTTP status code was provided. Continue the investigation with the error message, request ID, and server-side logs."
         ),
         likely_causes=knowledge["causes"] if knowledge else _generic_api_causes(text),
         troubleshooting_steps=knowledge["steps"] if knowledge else _generic_api_steps(),
@@ -270,7 +270,7 @@ def log_analyze(payload: LogAnalyzeRequest) -> LogAnalyzeResponse:
                 for code in status_codes
                 if code in STATUS_CODE_KNOWLEDGE
             )
-            or "未识别到明确状态码，建议补充完整访问日志、应用日志和 request_id。"
+            or "No explicit HTTP status code was detected. Please provide complete access logs, application logs, and request ID for further analysis."
         ),
         problem_causes=knowledge["causes"] if knowledge else _generic_log_causes(payload.log_text),
         troubleshooting_suggestions=knowledge["steps"] if knowledge else _generic_log_steps(),
@@ -285,25 +285,35 @@ def log_analyze(payload: LogAnalyzeRequest) -> LogAnalyzeResponse:
 def ticket_reply(payload: TicketReplyRequest) -> TicketReplyResponse:
     """Generate a professional support-ticket reply with rule-based content."""
     text = f"{payload.ticket_title}\n{payload.ticket_description}\n{payload.analysis_context or ''}"
-    category = QuestionClassifier().classify(text).value
+    category = _infer_support_category(text)
     status_codes = _extract_status_codes(text)
     actions = _next_actions_for_category(category, status_codes)
     missing_info = _missing_info_for_support(text, category)
-    greeting = f"{payload.customer_name}，您好" if payload.customer_name else "您好"
+    greeting = f"Dear {payload.customer_name}," if payload.customer_name else "Dear Customer,"
 
-    reply = (
-        f"{greeting}：\n\n"
-        f"我们已收到您反馈的“{payload.ticket_title}”问题。根据当前描述，问题初步归类为"
-        f"「{category}」场景。\n\n"
-        "初步建议如下：\n"
-        + "\n".join(f"{index}. {action}" for index, action in enumerate(actions, start=1))
-        + "\n\n为便于进一步定位，请补充：\n"
-        + "\n".join(f"- {item}" for item in missing_info)
-        + "\n\n收到补充信息后，我们可以继续协助您缩小故障链路并给出更具体的处理方案。"
+    reply = "\n\n".join(
+        [
+            greeting,
+            "Thank you for contacting us.",
+            (
+                f"Based on the information provided, this issue appears to be related to "
+                f"{category}. We are not making a final conclusion yet, and the next step is "
+                "to collect the evidence required to narrow down the affected layer."
+            ),
+            "Initial troubleshooting suggestions:\n"
+            + "\n".join(f"{index}. {action}" for index, action in enumerate(actions, start=1)),
+            "To continue the investigation, could you please provide the following information:\n"
+            + "\n".join(f"{index}. {item}" for index, item in enumerate(missing_info, start=1)),
+            (
+                "Once we receive the above information, we will continue the analysis and "
+                "provide the next update with more specific findings or escalation guidance."
+            ),
+            "Best regards,\nTechnical Support Team",
+        ]
     )
 
     return TicketReplyResponse(
-        subject=f"关于「{payload.ticket_title}」的初步排查建议",
+        subject=f"Initial troubleshooting request for: {payload.ticket_title}",
         reply=reply,
         action_items=actions,
         need_customer_confirm=missing_info,
@@ -346,8 +356,37 @@ def _matched_keywords(text: str) -> list[str]:
         "499",
         "鉴权",
         "限流",
+        "rate limit",
+        "quota",
+        "function calling",
+        "schema",
+        "rag",
+        "embedding",
     ]
     return [keyword for keyword in keywords if keyword.lower() in lowered]
+
+
+def _infer_support_category(text: str) -> str:
+    lowered = text.lower()
+    if any(
+        keyword in lowered
+        for keyword in [
+            "llm",
+            "large language model",
+            "model endpoint",
+            "chat/completions",
+            "function calling",
+            "tool calling",
+            "prompt",
+            "rag",
+            "embedding",
+            "token",
+            "rate limit",
+            "quota",
+        ]
+    ):
+        return "LLM"
+    return QuestionClassifier().classify(text).value
 
 
 def _infer_priority(text: str, status_codes: list[int], customer_level: str | None) -> str:
@@ -379,13 +418,31 @@ def _infer_intent(text: str) -> str:
 
 def _assigned_team(category: str) -> str:
     mapping = {
-        "CDN": "边缘网络/CDN 支持团队",
-        "DNS": "域名解析/DNS 支持团队",
-        "HTTPS": "证书与安全接入支持团队",
-        "视频播放": "音视频技术支持团队",
-        "Kubernetes": "容器云/Kubernetes 支持团队",
+        "CDN": "Edge Network / CDN Support Team",
+        "DNS": "DNS and Traffic Management Support Team",
+        "HTTPS": "TLS / Security Support Team",
+        "视频播放": "Media Delivery / Video Support Team",
+        "Kubernetes": "Cloud Native / Kubernetes Support Team",
+        "LLM": "LLM API Support Team",
     }
-    return mapping.get(category, "云产品技术支持一线团队")
+    return mapping.get(category, "Cloud Support Team")
+
+
+def _triage_reason(
+    category: str,
+    keywords: list[str],
+    status_codes: list[int],
+    priority: str,
+) -> str:
+    keyword_text = ", ".join(keywords[:6]) if keywords else "general support signals"
+    status_text = ", ".join(str(code) for code in status_codes) if status_codes else "no explicit HTTP status code"
+    return (
+        f"The ticket matches {category} support signals such as {keyword_text}. "
+        f"Detected status information: {status_text}. Based on the reported impact and "
+        f"available evidence, it is currently classified as priority {priority}. "
+        "The first response should focus on evidence collection, reproduction scope, "
+        "and identifying whether the issue is on the client, edge, origin, or LLM API layer."
+    )
 
 
 def _next_actions_for_category(category: str, status_codes: list[int]) -> list[str]:
@@ -395,26 +452,35 @@ def _next_actions_for_category(category: str, status_codes: list[int]) -> list[s
             return STATUS_CODE_KNOWLEDGE[code]["steps"]
 
     mapping = {
-        "CDN": ["确认访问 URL、加速域名和源站地址", "检查缓存命中率、回源状态和边缘节点日志", "对比直连源站与 CDN 访问结果"],
-        "DNS": ["使用 dig/nslookup 检查解析结果", "确认 CNAME、A 记录和 TTL 配置", "检查权威 DNS 与本地递归 DNS 是否一致"],
-        "HTTPS": ["检查证书有效期、证书链和域名匹配", "确认 TLS 版本和加密套件兼容性", "核对 CDN/负载均衡的 HTTPS 回源配置"],
-        "视频播放": ["确认播放 URL、格式和播放器错误码", "检查首帧耗时、卡顿时间点和码率", "对比不同地域、网络和终端的播放表现"],
-        "Kubernetes": ["查看 Pod 事件、重启次数和容器日志", "检查 Deployment、Service、Ingress 配置", "确认资源配额、探针和节点状态"],
+        "CDN": ["Confirm the affected domain, full URL, and origin address", "Check cache status, origin status, edge logs, and back-to-origin latency", "Compare CDN access with direct origin access from the same region"],
+        "DNS": ["Run dig/nslookup against multiple recursive resolvers", "Verify CNAME/A/AAAA records, TTL, and authoritative DNS configuration", "Compare authoritative DNS results with client-side DNS results"],
+        "HTTPS": ["Check certificate validity, SAN/CN match, and certificate chain", "Verify TLS version, cipher compatibility, SNI, and Host header", "Compare certificate deployment on CDN, load balancer, and origin"],
+        "视频播放": ["Collect playback URL, player error code, SDK version, and client region", "Break down DNS, TCP, TLS, TTFB, manifest, and first segment download time", "Compare first-frame time across regions, ISPs, devices, and bitrates"],
+        "Kubernetes": ["Check Pod events, restart count, and container logs", "Review Deployment, Service, Ingress, requests/limits, and scheduling constraints", "Verify ResourceQuota, node status, taints, tolerations, and PVC binding"],
+        "LLM": ["Confirm the model name, endpoint, workspace, and SDK version", "Collect request ID, response body, token usage, and rate-limit headers", "Check API key permission, quota, billing status, and retry/backoff configuration"],
     }
-    return mapping.get(category, ["补充 request_id、时间范围和完整错误信息", "确认问题影响范围和复现步骤", "检查相关服务日志与监控指标"])
+    return mapping.get(category, ["Collect request ID, timestamp with timezone, and complete error response", "Confirm reproduction steps, affected region, and business impact", "Review application logs, gateway logs, and monitoring metrics"])
 
 
 def _missing_info_for_support(text: str, category: str) -> list[str]:
     missing = []
     if "request" not in text.lower() and "trace" not in text.lower():
-        missing.append("request_id 或 trace_id")
+        missing.append("request ID or trace ID")
     if not re.search(r"\d{4}-\d{2}-\d{2}|\d{2}:\d{2}", text):
-        missing.append("问题发生时间和持续时间")
+        missing.append("timestamp with timezone and issue duration")
     if category in {"CDN", "DNS", "HTTPS", "视频播放"} and "http" not in text.lower():
-        missing.append("受影响 URL、域名或播放地址")
+        missing.append("affected domain, full URL, or playback URL")
     if category == "Kubernetes" and "namespace" not in text.lower():
-        missing.append("集群、namespace、Pod 名称和相关 kubectl describe/logs 输出")
-    return missing or ["当前信息较完整，可继续提供日志和监控截图以提高定位准确度"]
+        missing.append("cluster ID, namespace, Pod name, kubectl describe output, and container logs")
+    if category == "LLM" and "request" not in text.lower():
+        missing.append("LLM request body with sensitive values removed")
+    if category == "LLM" and "model" not in text.lower():
+        missing.append("model name, endpoint, SDK version, and workspace or project scope")
+    if "region" not in text.lower() and "ip" not in text.lower():
+        missing.append("client region or source IP")
+    if "impact" not in text.lower() and "影响" not in text.lower():
+        missing.append("business impact and affected user scope")
+    return missing or ["The provided information is sufficient for initial triage; logs and monitoring screenshots can further improve analysis quality"]
 
 
 def _required_debug_info(payload: ApiDebugRequest) -> list[str]:
@@ -422,12 +488,12 @@ def _required_debug_info(payload: ApiDebugRequest) -> list[str]:
     if not payload.request_id:
         required.append("request_id / trace_id")
     if not payload.status_code:
-        required.append("HTTP 状态码")
+        required.append("HTTP status code")
     if not payload.url:
-        required.append("完整请求 URL")
+        required.append("full request URL")
     if not payload.response_body:
-        required.append("响应体或错误响应片段")
-    return required or ["当前 API 调试信息较完整"]
+        required.append("response body or error response snippet")
+    return required or ["The current API debugging information is sufficient for initial analysis"]
 
 
 def _missing_info_for_logs(log_text: str) -> list[str]:
@@ -438,8 +504,10 @@ def _missing_info_for_logs(log_text: str) -> list[str]:
     if "upstream" not in lowered:
         missing.append("upstream_response_time / upstream_addr")
     if not re.search(r"\d{4}-\d{2}-\d{2}|\d{2}:\d{2}", log_text):
-        missing.append("日志时间范围")
-    return missing or ["当前日志字段较完整"]
+        missing.append("log timestamp and timezone")
+    if "region" not in lowered and "ip" not in lowered:
+        missing.append("client region or source IP")
+    return missing or ["The log fields are sufficient for initial analysis"]
 
 
 def _extract_evidence(log_text: str) -> list[str]:
@@ -468,29 +536,29 @@ def _infer_problem_from_text(text: str) -> str:
 def _generic_api_causes(text: str) -> list[str]:
     problem = _infer_problem_from_text(text)
     if problem == "timeout":
-        return ["客户端或网关超时", "服务端处理耗时过长", "上游依赖响应慢"]
+        return ["Client or gateway timeout", "Backend processing latency is too high", "Upstream dependency is slow or unstable"]
     if problem == "auth_failed":
-        return ["Token 或签名无效", "鉴权 Header 缺失", "账号权限或时间戳异常"]
+        return ["Invalid token or signature", "Authorization header is missing", "Account permission or timestamp is invalid"]
     if problem == "rate_limited":
-        return ["请求频率超过限制", "并发过高", "账号或模型调用额度不足"]
-    return ["请求参数或路径不匹配", "服务端依赖异常", "缺少 request_id，无法精确查询链路"]
+        return ["Request rate exceeds the limit", "Concurrency is too high", "Account quota, billing, or model entitlement is insufficient"]
+    return ["Request path or parameters do not match the API contract", "Backend dependency may be unavailable", "Missing request ID makes trace lookup difficult"]
 
 
 def _generic_api_steps() -> list[str]:
-    return ["保留完整 URL、Method、Header、Body 和响应体", "使用 request_id 查询服务端链路日志", "对比成功请求和失败请求的参数差异"]
+    return ["Keep the full URL, method, headers, request body, and response body", "Use request ID to query backend trace logs", "Compare parameters between successful and failed requests"]
 
 
 def _generic_log_causes(log_text: str) -> list[str]:
     problem = _infer_problem_from_text(log_text)
     if problem == "timeout":
-        return ["请求链路存在超时", "上游服务响应慢", "网络链路不稳定"]
+        return ["The request path contains a timeout", "Upstream service latency is high", "Network path may be unstable"]
     if problem == "dns_resolution":
-        return ["DNS 解析失败或解析结果不一致", "本地递归 DNS 缓存异常", "域名记录配置不完整"]
-    return ["日志证据不足", "需要结合访问日志、应用日志和监控指标继续判断"]
+        return ["DNS resolution failed or returned inconsistent results", "Recursive DNS cache may be stale", "DNS record configuration may be incomplete"]
+    return ["The current log evidence is insufficient", "Access logs, application logs, and monitoring metrics are needed for further analysis"]
 
 
 def _generic_log_steps() -> list[str]:
-    return ["补充完整日志时间范围和 request_id", "检查应用错误日志、网关日志和上游依赖日志", "对比正常请求与异常请求的状态码、耗时和来源地域"]
+    return ["Provide the full log time range and request ID", "Check application error logs, gateway logs, and upstream dependency logs", "Compare status code, latency, and client region between successful and failed requests"]
 
 
 def _severity_from_status(status_code: int | None) -> str:
