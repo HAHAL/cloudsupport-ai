@@ -1,82 +1,73 @@
 # CloudSupport AI
 
-CloudSupport AI 是一个面向云产品与大模型产品技术支持场景的 **AI Support Copilot 原型项目**，用于模拟一线技术支持中的工单分诊、知识库检索、API 报错分析、HTTP 日志分析、英文客户回复生成与升级信息收集流程。
+面向云产品与大模型技术支持场景的 AI Support Workflow Prototype
 
-项目基于 `Python`、`FastAPI`、`Pydantic`、`RAG`、`Prompt Engineering`、`Postman` 和 `Docker` 构建，重点展示 AI 技术支持、云计算技术支持、大模型产品支持岗位所需的 API 调试、排障分析、知识库沉淀和客户沟通能力。
+CloudSupport AI 是一个轻量级 AI 辅助技术支持工作流原型，面向云产品和 LLM API 支持场景。它用于将重复出现的支持问题沉淀为结构化的诊断、分诊、回复生成和升级信息收集流程。
 
-本项目是个人实践项目，使用模拟样例内容，重点展示工程思路和支持工作流。
+## 项目概览
 
-## Target Roles
+CloudSupport AI 用于验证 AI 辅助技术支持工作流，覆盖知识库检索、工单分诊、API 报错分析、HTTP 日志分析、客户回复生成和升级信息收集等环节。
 
-- AI 技术支持工程师
-- 云计算技术支持工程师
-- 大模型技术支持工程师
-- 海外技术支持工程师
-- LLM Support Engineer
-- AI Solution Support Engineer
+后端提供 RESTful API，并以结构化 JSON 返回结果。部分工作流采用稳定的规则兜底逻辑，因此在没有 LLM API Key 的情况下也可以本地运行。`/chat` 接口展示了 RAG 风格的知识库问答流程，包括 Markdown 知识库、Embedding、Chroma 检索、Prompt 构造和外部 LLM Provider 调用。
 
-## Tech Stack
+## 背景
 
-- Backend: `Python`, `FastAPI`, `Pydantic`
-- RAG: `LangChain`, `Chroma`, `Embedding`, `Top-K Retrieval`
-- LLM API: `OpenAI / Qwen compatible API`
-- Prompt: `Prompt Engineering`, structured output, anti-hallucination constraints
-- Deployment: `Docker`, `docker-compose`
-- API Testing: `Postman`, `curl`
-- Knowledge Base: Markdown support documents
+技术支持团队在日常工作中经常遇到以下问题：
 
-## Core Features
+- 重复问题较多，占用一线支持时间。
+- 知识库检索效率不稳定。
+- 工单分类依赖工程师经验。
+- `401`、`429`、`502`、`504` 等 API 报错需要快速定位。
+- HTTP 日志需要转换为可执行的排查步骤。
+- 客户回复需要保持专业、克制、证据明确。
+- 新成员需要参考标准化排障路径。
 
-| Feature | API | Description |
-| --- | --- | --- |
-| Health Check | `GET /health` | Check service availability |
-| RAG Chat | `POST /chat` | Retrieve support knowledge and generate an answer |
-| Ticket Triage | `POST /ticket-triage` | Classify ticket category, priority, support team, and missing information |
-| API Debug | `POST /api-debug` | Analyze API errors such as 401, 403, 429, 5xx |
-| Log Analysis | `POST /log-analyze` | Analyze HTTP logs such as 499, 502, 504, timeout |
-| Ticket Reply | `POST /ticket-reply` | Generate a professional English customer reply draft |
+CloudSupport AI 提供一个紧凑的工作流原型，用于验证这些技术支持场景。
 
-## Architecture
+## 核心功能
+
+1. 技术支持知识库问答
+2. 工单分诊
+3. API 报错分析
+4. HTTP 日志分析
+5. 客户回复生成
+6. 升级信息收集
+7. RAG 风格知识库检索
+8. Docker 化部署
+
+## 系统架构
 
 ```mermaid
 flowchart LR
-    User["Support Engineer / Interviewer"] --> API["FastAPI Backend"]
+    Client["Client / Postman / API Caller"] --> API["FastAPI Service"]
 
-    API --> Triage["Ticket Triage<br/>Rule-based fallback"]
-    API --> Debug["API Debug<br/>HTTP status analysis"]
-    API --> Logs["HTTP Log Analysis"]
-    API --> Reply["English Ticket Reply"]
-    API --> Chat["RAG Chat"]
+    API --> Rule["Prompt / Rule Engine"]
+    API --> RAG["RAG-style Retrieval"]
 
-    Chat --> Classifier["Question Classifier"]
-    Chat --> Retriever["LangChain Retriever"]
-    Retriever --> Chroma["Chroma Vector DB"]
-    Retriever --> KB["Markdown Knowledge Base"]
-    Chat --> Prompt["Prompt Manager"]
-    Prompt --> LLM["OpenAI / Qwen API"]
+    Rule --> SupportJSON["Structured Support Response"]
+    RAG --> KB["Markdown Knowledge Base"]
+    RAG --> VectorDB["Chroma Vector Store"]
+    RAG --> LLM["LLM Provider<br/>OpenAI / Qwen compatible API"]
 
-    API --> JSON["Structured JSON Response"]
+    KB --> VectorDB
+    LLM --> SupportJSON
 ```
 
-## Demo Screenshots
+## 技术栈
 
-### Swagger API Docs
+- Python
+- FastAPI
+- Pydantic
+- Markdown Knowledge Base
+- LangChain
+- Chroma
+- Embedding
+- Docker
+- Postman
+- RESTful API
+- LLM API / Mockable LLM Provider
 
-![Swagger API Docs](docs/swagger_api_docs.png)
-
-### Ticket Triage
-
-![Ticket Triage](docs/ticket_triage_result.png)
-
-### API Debug
-
-![API Debug](docs/api_debug_result.png)
-
-### English Ticket Reply
-
-![English Ticket Reply](docs/ticket_reply_result.png)
-
-## Project Structure
+## 项目结构
 
 ```text
 .
@@ -104,99 +95,93 @@ flowchart LR
 └── README_EN.md
 ```
 
-## Knowledge Base
+## 快速启动
 
-`knowledge/` 目录提供云计算和大模型技术支持场景的 Markdown 样例，适合被 RAG 模块加载、切分、向量化并写入 Chroma。
-
-```text
-knowledge/
-├── cdn/            # CDN 502/504, cache miss, high TTFB
-├── dns/            # DNS resolution failure
-├── https/          # TLS certificate issue
-├── video/          # first frame slow, HLS playback stutter
-├── kubernetes/     # Pod Pending
-└── llm/            # LLM API errors, Prompt, RAG, Function Calling
-```
-
-知识库文档采用统一技术支持结构：
-
-- Scenario / 适用场景
-- Symptoms / 常见现象
-- Possible Causes / 可能原因
-- Troubleshooting Steps / 排查步骤
-- Required Information / 客户需要提供的信息
-- Escalation Criteria / 升级专家或研发的条件
-
-## Quick Start
-
-### 1. Clone
+### 本地启动
 
 ```bash
 git clone https://github.com/HAHAL/cloudsupport-ai.git
 cd cloudsupport-ai
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
 ```
 
-### 2. Environment Variables
+### Docker 启动
 
-规则兜底接口可以在没有 LLM API Key 的情况下运行：
+```bash
+docker compose up --build -d
+docker compose ps
+docker compose logs -f
+```
+
+### 环境变量
+
+规则兜底类接口不依赖 LLM API Key，可以先创建空 `.env`：
 
 ```bash
 touch .env
 ```
 
-完整 `/chat` RAG 流程需要配置 LLM 和 Embedding API Key：
+完整 `/chat` RAG 流程需要配置 LLM 和 Embedding Provider：
 
 ```env
 LLM_PROVIDER=openai
 EMBEDDING_PROVIDER=openai
 OPENAI_API_KEY=your_openai_key
 
-# Or Qwen / DashScope compatible endpoint
+# 或使用 Qwen / DashScope compatible endpoint
 # LLM_PROVIDER=qwen
 # EMBEDDING_PROVIDER=qwen
 # DASHSCOPE_API_KEY=your_dashscope_key
 ```
 
-### 3. Docker
+## API 文档
 
-```bash
-docker compose up --build -d
-```
-
-Check service:
-
-```bash
-docker compose ps
-docker compose logs -f
-```
-
-Open Swagger:
+启动后访问 Swagger / OpenAPI 文档：
 
 ```text
 http://localhost:8000/docs
 ```
 
-## API Endpoints
+## API 示例
 
-| API | Method | Purpose |
-| --- | --- | --- |
-| `/health` | GET | Service health check |
-| `/docs` | GET | Swagger API documentation |
-| `/chat` | POST | RAG-based support Q&A |
-| `/ticket-triage` | POST | Ticket classification and triage |
-| `/api-debug` | POST | API error troubleshooting |
-| `/log-analyze` | POST | HTTP log analysis |
-| `/ticket-reply` | POST | English customer reply generation |
+### `POST /chat`
 
-## curl Examples
+**适用场景：** 输入技术支持问题，检索知识库上下文并生成回答。
 
-### Health Check
+**请求示例**
 
 ```bash
-curl http://localhost:8000/health
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "CDN returns intermittent 504, how should we troubleshoot it?"
+  }'
 ```
 
-### Ticket Triage
+**响应示例**
+
+```json
+{
+  "question": "CDN returns intermittent 504, how should we troubleshoot it?",
+  "category": "CDN",
+  "answer": "The issue may be related to origin timeout or upstream response latency...",
+  "retrieved_contents": [],
+  "references": [],
+  "metadata": {
+    "retrieval_top_k": 4,
+    "has_context": true
+  }
+}
+```
+
+### `POST /ticket-triage`
+
+**适用场景：** 对技术支持工单进行分类，识别优先级、支持团队、缺失信息和下一步动作。
+
+**请求示例**
 
 ```bash
 curl -X POST http://localhost:8000/ticket-triage \
@@ -205,25 +190,63 @@ curl -X POST http://localhost:8000/ticket-triage \
     "title": "CDN accelerated API returns intermittent 504 in Singapore",
     "description": "The customer reports 504 through CDN. Nginx log shows request_time=60.001 and upstream_response_time=60.000.",
     "customer_level": "enterprise",
-    "affected_product": "BytePlus CDN"
+    "affected_product": "CDN"
   }'
 ```
 
-### API Debug
+**响应示例**
+
+```json
+{
+  "category": "CDN",
+  "priority": "p1",
+  "intent": "troubleshooting",
+  "assigned_team": "Edge Network / CDN Support Team",
+  "reason": "The ticket matches CDN support signals...",
+  "keywords": ["cdn", "504"],
+  "missing_info": ["request ID or trace ID", "client region or source IP"],
+  "next_actions": ["Compare request_time and upstream_response_time"],
+  "confidence": 0.78
+}
+```
+
+### `POST /api-debug`
+
+**适用场景：** 分析 API 调用失败，例如鉴权失败、配额限制、限流和服务端错误。
+
+**请求示例**
 
 ```bash
 curl -X POST http://localhost:8000/api-debug \
   -H "Content-Type: application/json" \
   -d '{
     "method": "POST",
-    "url": "https://ark.ap-southeast.byteplusapi.com/api/v3/chat/completions",
+    "url": "https://api.example.com/v1/chat/completions",
     "status_code": 429,
     "error_message": "Rate limit exceeded for model endpoint",
     "request_id": "req_demo_429"
   }'
 ```
 
-### Log Analysis
+**响应示例**
+
+```json
+{
+  "problem_type": "rate_limited",
+  "status_code_explanation": "429 Too Many Requests means the request hit a rate limit...",
+  "likely_causes": ["RPM/TPM/QPS limit exceeded"],
+  "troubleshooting_steps": ["Add retry with exponential backoff and jitter"],
+  "required_info": ["response body or error response snippet"],
+  "severity": "medium",
+  "confidence": 0.82
+}
+```
+
+### `POST /log-analyze`
+
+**适用场景：** 将 HTTP 访问日志或应用日志转换为结构化排查建议。
+
+**请求示例**
 
 ```bash
 curl -X POST http://localhost:8000/log-analyze \
@@ -234,7 +257,26 @@ curl -X POST http://localhost:8000/log-analyze \
   }'
 ```
 
-### Ticket Reply
+**响应示例**
+
+```json
+{
+  "problem_type": "gateway_timeout",
+  "status_code_explanation": "504 Gateway Timeout means the CDN, gateway, or load balancer timed out...",
+  "problem_causes": ["Origin response latency is high"],
+  "troubleshooting_suggestions": ["Compare request_time and upstream_response_time"],
+  "detected_status_codes": [504],
+  "evidence": ["status=504 request_time=60.001 upstream_response_time=60.000 error=upstream timed out"],
+  "missing_info": ["request_id / trace_id"],
+  "confidence": 0.84
+}
+```
+
+### `POST /ticket-reply`
+
+**适用场景：** 根据问题上下文生成面向客户的专业回复草稿。
+
+**请求示例**
 
 ```bash
 curl -X POST http://localhost:8000/ticket-reply \
@@ -247,80 +289,122 @@ curl -X POST http://localhost:8000/ticket-reply \
   }'
 ```
 
-### RAG Chat
+**响应示例**
+
+```json
+{
+  "subject": "Initial troubleshooting request for: LLM Function Calling schema validation failed",
+  "reply": "Dear Customer,\n\nThank you for contacting us...",
+  "action_items": ["Confirm the model name, endpoint, workspace, and SDK version"],
+  "need_customer_confirm": ["request ID or trace ID"],
+  "tone": "professional",
+  "confidence": 0.76
+}
+```
+
+### `POST /escalation-info`
+
+**适用场景：** 在升级给专项支持或产品工程团队前，收集必要的排障信息和证据。
+
+**请求示例**
 
 ```bash
-curl -X POST http://localhost:8000/chat \
+curl -X POST http://localhost:8000/escalation-info \
   -H "Content-Type: application/json" \
   -d '{
-    "question": "CDN returns intermittent 504, how should we troubleshoot it?"
+    "issue_summary": "LLM API returns intermittent 5xx for streaming requests",
+    "product_area": "LLM",
+    "observed_error": "status=502, stream interrupted",
+    "business_impact": "Affects a customer service chatbot integration test"
   }'
 ```
 
-## Postman Usage
+**响应示例**
 
-Import the collection:
+```json
+{
+  "category": "LLM",
+  "escalation_team": "LLM API Support Team",
+  "required_information": ["request ID or trace ID", "timestamp with timezone and issue duration"],
+  "suggested_summary": "Category: LLM. Issue summary: LLM API returns intermittent 5xx for streaming requests...",
+  "escalation_criteria": ["The issue affects multiple users, regions, or critical business paths"],
+  "confidence": 0.78
+}
+```
+
+## 知识库
+
+Markdown 知识库覆盖以下方向：
+
+- CDN
+- DNS
+- HTTPS
+- HTTP 状态码
+- Video Streaming
+- Kubernetes
+- LLM API
+- Rate Limit
+- Timeout
+- Authentication Error
+- Prompt optimization
+- RAG retrieval quality
+- Function Calling schema issues
+
+文档采用统一的技术支持结构：
+
+```text
+Scenario
+Symptoms
+Possible Causes
+Troubleshooting Steps
+Required Information
+Escalation Criteria
+```
+
+## Postman 使用
+
+导入 Collection：
 
 ```text
 postman/CloudSupport-AI.postman_collection.json
 ```
 
-Default variable:
+默认变量：
 
 ```text
 base_url = http://localhost:8000
 ```
 
-Example request bodies:
+示例请求体位于：
 
 ```text
 examples/
-├── cdn_504_ticket.json
-├── llm_api_401_error.json
-├── llm_api_429_error.json
-├── video_first_frame_slow.json
-└── english_ticket_reply.json
 ```
 
-## Test Result
+## 测试结果
 
-See [TEST_RESULT.md](TEST_RESULT.md).
+详见 [TEST_RESULT.md](TEST_RESULT.md)。
 
-Summary:
+## 设计说明
 
-- Rule-based APIs can run without an LLM API key.
-- `/chat` requires a valid LLM and embedding API key for full RAG behavior.
-- `/docs` exposes all API endpoints for Swagger testing.
+1. 将规则逻辑与 LLM 输出结合，是因为很多支持工作流需要在 LLM Provider 不可用时仍能稳定返回首轮排查结果。
+2. 支持响应采用结构化 JSON，便于前端、工单系统或自动化流程展示诊断结果、缺失信息、下一步动作和升级条件。
+3. 显式收集升级信息，可以减少一线支持与专项团队之间的反复沟通。
+4. 使用 Markdown 知识库是为了让知识内容易于审阅、版本管理和更新，同时支持轻量级 RAG 检索。
+5. 后续可以通过字段映射接入内部工单系统，将分析结果写回工单备注、建议回复或升级摘要。
 
-## Interview Talking Points
+## 限制说明
 
-- Why RAG is suitable for technical support scenarios
-- How ticket triage helps improve first response quality
-- How to troubleshoot LLM API errors such as 401, 429 and 5xx
-- How Prompt Engineering is used to control output format and reduce hallucination
-- How English ticket replies can reduce communication cost for overseas customers
-- How to collect required information before escalating issues
-- What should be added before production use: authentication, rate limiting, monitoring, evaluation, access control and audit logs
+本项目是用于技术支持工作流验证的原型项目。默认不连接客户数据或工单系统。
 
-## Limitations and Future Improvements
+规则兜底流程主要用于本地开发和工作流验证。`/chat` 接口如需完整 RAG 能力，需要有效的 LLM 和 Embedding 凭证。
 
-This project is a personal practice and interview demo project, not a production system.
+## Roadmap
 
-Future improvements:
-
-- Add authentication and role-based access control
-- Add API rate limiting and request audit logs
-- Add Prometheus and Grafana monitoring
-- Add RAG evaluation dataset and answer quality scoring
-- Add multi-tenant knowledge base isolation
-- Add conversation history and ticket context memory
-- Add CI/CD workflow for automated tests
-- Add persistent ticket storage and search
-- Add frontend UI for support engineers
-
-## Scope
-
-- This is a personal practice and interview demo project.
-- The examples and knowledge base files use simulated support scenarios.
-- Rule-based fallback logic is used for stable demonstration.
-- Full RAG behavior requires valid LLM and embedding API keys.
+- 接入真实向量数据库
+- 集成工单系统
+- 增加认证与权限控制
+- 增加可观测性指标
+- 增加多租户知识库隔离
+- 增加支持答案评测数据集
+- 增加 Web UI

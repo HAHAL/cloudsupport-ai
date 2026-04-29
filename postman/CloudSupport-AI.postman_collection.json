@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "CloudSupport AI",
-    "description": "Postman collection for CloudSupport AI FastAPI backend. Scenarios are designed for overseas cloud computing and LLM technical support interviews.",
+    "description": "Postman collection for CloudSupport AI FastAPI backend. Scenarios cover cloud computing and LLM technical support workflows.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -183,6 +183,32 @@
           ]
         },
         "description": "Generate a professional support reply for an overseas LLM Function Calling ticket."
+      }
+    },
+    {
+      "name": "Escalation Info - LLM Streaming 5xx",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"issue_summary\": \"LLM API returns intermittent 5xx for streaming requests\",\n  \"product_area\": \"LLM\",\n  \"observed_error\": \"status=502, stream interrupted\",\n  \"business_impact\": \"Affects a customer service chatbot integration test\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/escalation-info",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "escalation-info"
+          ]
+        },
+        "description": "Collect required information before escalating a technical support issue."
       }
     }
   ]

@@ -18,10 +18,11 @@
 | /api-debug | POST | Passed |
 | /log-analyze | POST | Passed |
 | /ticket-reply | POST | Passed |
+| /escalation-info | POST | Passed |
 
 ## Notes
 
 - Rule-based APIs can run without an LLM API key.
 - /chat requires a valid LLM and embedding API key for full RAG behavior.
-- This project is designed as a personal AI technical support practice project for cloud and LLM support scenarios.
+- This project is designed for AI-assisted technical support workflow validation in cloud and LLM support scenarios.
 - The project uses simulated sample data only.

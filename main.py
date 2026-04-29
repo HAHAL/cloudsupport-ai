@@ -121,6 +121,22 @@ class TicketReplyResponse(BaseModel):
     confidence: float
 
 
+class EscalationInfoRequest(BaseModel):
+    issue_summary: str = Field(..., min_length=2, description="Brief issue summary")
+    product_area: str | None = Field(None, description="Product area, such as CDN, LLM, DNS, Video, Kubernetes")
+    observed_error: str | None = Field(None, description="Observed error message, status code, or log snippet")
+    business_impact: str | None = Field(None, description="Impact scope and urgency")
+
+
+class EscalationInfoResponse(BaseModel):
+    category: str
+    escalation_team: str
+    required_information: list[str]
+    suggested_summary: str
+    escalation_criteria: list[str]
+    confidence: float
+
+
 STATUS_CODE_KNOWLEDGE: dict[int, dict[str, Any]] = {
     400: {
         "type": "bad_request",
@@ -322,10 +338,36 @@ def ticket_reply(payload: TicketReplyRequest) -> TicketReplyResponse:
     )
 
 
+@app.post("/escalation-info", response_model=EscalationInfoResponse)
+def escalation_info(payload: EscalationInfoRequest) -> EscalationInfoResponse:
+    """Collect information required before escalating a support issue."""
+    text = "\n".join(
+        item
+        for item in [
+            payload.issue_summary,
+            payload.product_area,
+            payload.observed_error,
+            payload.business_impact,
+        ]
+        if item
+    )
+    category = _infer_support_category(text)
+    status_codes = _extract_status_codes(text)
+
+    return EscalationInfoResponse(
+        category=category,
+        escalation_team=_escalation_team(category),
+        required_information=_missing_info_for_support(text, category),
+        suggested_summary=_build_escalation_summary(payload, category, status_codes),
+        escalation_criteria=_escalation_criteria(category, status_codes),
+        confidence=0.78 if payload.observed_error or status_codes else 0.58,
+    )
+
+
 def _extract_status_codes(text: str) -> list[int]:
     codes: list[int] = []
-    for candidate in re.findall(r"(?<!\d)([1-5]\d{2})(?!\d)", text):
-        code = int(candidate)
+    for match in re.findall(r"(?<!\d)([1-5]\d{2})(?!\d)", text):
+        code = int(match)
         if code not in codes:
             codes.append(code)
     return codes
@@ -426,6 +468,18 @@ def _assigned_team(category: str) -> str:
         "LLM": "LLM API Support Team",
     }
     return mapping.get(category, "Cloud Support Team")
+
+
+def _escalation_team(category: str) -> str:
+    mapping = {
+        "CDN": "Edge Network / CDN Support Team",
+        "DNS": "DNS and Traffic Management Support Team",
+        "HTTPS": "TLS / Security Support Team",
+        "视频播放": "Media Delivery / Video Support Team",
+        "Kubernetes": "Cloud Native / Kubernetes Support Team",
+        "LLM": "LLM API Support Team",
+    }
+    return mapping.get(category, "Product Engineering Team")
 
 
 def _triage_reason(
@@ -559,6 +613,40 @@ def _generic_log_causes(log_text: str) -> list[str]:
 
 def _generic_log_steps() -> list[str]:
     return ["Provide the full log time range and request ID", "Check application error logs, gateway logs, and upstream dependency logs", "Compare status code, latency, and client region between successful and failed requests"]
+
+
+def _build_escalation_summary(
+    payload: EscalationInfoRequest,
+    category: str,
+    status_codes: list[int],
+) -> str:
+    status_text = ", ".join(str(code) for code in status_codes) if status_codes else "not provided"
+    impact = payload.business_impact or "impact scope not provided"
+    return (
+        f"Category: {category}. Issue summary: {payload.issue_summary}. "
+        f"Observed status/error: {payload.observed_error or status_text}. "
+        f"Business impact: {impact}. Additional evidence should be collected before escalation."
+    )
+
+
+def _escalation_criteria(category: str, status_codes: list[int]) -> list[str]:
+    if any(code in status_codes for code in [500, 502, 503, 504]):
+        return [
+            "The issue affects multiple users, regions, or critical business paths",
+            "Origin, gateway, or LLM provider errors persist after basic configuration checks",
+            "Request ID and timestamp are available for backend trace lookup",
+        ]
+    if category == "LLM":
+        return [
+            "API key, quota, endpoint, and model permission have been verified",
+            "The same request fails consistently with request ID available",
+            "Schema, prompt, or RAG behavior differs from expected API behavior",
+        ]
+    return [
+        "The issue is reproducible with clear timestamps and request evidence",
+        "Basic configuration checks have been completed",
+        "The support team needs product-side trace, configuration, or service health confirmation",
+    ]
 
 
 def _severity_from_status(status_code: int | None) -> str:

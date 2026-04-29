@@ -115,10 +115,10 @@ class LogAnalyzer:
     @classmethod
     def extract_status_codes(cls, text: str) -> list[int]:
         """Extract HTTP status codes from raw response text or access logs."""
-        candidates = re.findall(r"(?<!\d)([1-5]\d{2})(?!\d)", text)
+        matches = re.findall(r"(?<!\d)([1-5]\d{2})(?!\d)", text)
         status_codes = []
-        for candidate in candidates:
-            code = int(candidate)
+        for match in matches:
+            code = int(match)
             if 100 <= code <= 599 and code not in status_codes:
                 status_codes.append(code)
         return status_codes

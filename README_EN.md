@@ -1,123 +1,122 @@
 # CloudSupport AI
 
-CloudSupport AI is an **AI Support Copilot prototype** for cloud product and LLM product support scenarios. It simulates common frontline support workflows, including ticket triage, knowledge base retrieval, API error diagnosis, HTTP log analysis, English customer reply drafting, and escalation information collection.
+AI Support Workflow Prototype for Cloud and LLM Technical Support
 
-The project is built with `Python`, `FastAPI`, `Pydantic`, `RAG`, `Prompt Engineering`, `Postman`, and `Docker`. It is designed to demonstrate practical skills required for AI Technical Support Engineer, Cloud Support Engineer, and LLM Support Engineer roles: API debugging, troubleshooting, knowledge base organization, and customer communication.
-
-This is a personal practice demo project. All examples are simulated support scenarios.
+CloudSupport AI is a lightweight AI-assisted support workflow prototype for cloud products and LLM API support scenarios. It helps transform repeated support patterns into structured diagnosis, triage, reply generation, and escalation workflows.
 
 ## Overview
 
-The backend exposes several structured JSON APIs for technical support workflows. Some APIs use deterministic rule-based fallback logic so that they can run without an LLM API key. The `/chat` endpoint demonstrates a RAG workflow with document loading, chunking, embeddings, Chroma retrieval, prompt construction, and LLM response generation.
+CloudSupport AI validates AI-assisted technical support workflows such as knowledge base retrieval, ticket triage, API error analysis, HTTP log analysis, customer reply generation, and escalation information collection.
 
-## Target Roles
+The backend provides RESTful APIs with stable structured JSON responses. Rule-based workflows can run locally without an LLM API key. The `/chat` endpoint demonstrates a RAG-style workflow using Markdown documents, embeddings, Chroma retrieval, prompt construction, and an external LLM provider.
 
-- AI Technical Support Engineer
-- Cloud Support Engineer
-- LLM Support Engineer
-- Overseas Technical Support Engineer
-- AI Solution Support Engineer
+## Background
 
-## Tech Stack
+Support workflows often include repeated questions, fragmented knowledge, manual ticket classification, unclear API errors, and inconsistent reply quality. This project models those patterns as reusable API workflows that can be tested with curl, Postman, or a simple frontend.
 
-- Backend: `Python`, `FastAPI`, `Pydantic`
-- RAG: `LangChain`, `Chroma`, `Embedding`, `Top-K Retrieval`
-- LLM API: `OpenAI / Qwen compatible API`
-- Prompting: `Prompt Engineering`, structured output, anti-hallucination rules
-- Deployment: `Docker`, `docker-compose`
-- API Testing: `Postman`, `curl`
-- Knowledge Base: Markdown support documents
+## Key Features
 
-## Core Features
-
-| Feature | API | Description |
-| --- | --- | --- |
-| Health Check | `GET /health` | Check service status |
-| RAG Chat | `POST /chat` | Retrieve support knowledge and generate an answer |
-| Ticket Triage | `POST /ticket-triage` | Classify ticket category, priority, support team, and missing information |
-| API Debug | `POST /api-debug` | Analyze API errors such as 401, 403, 429, and 5xx |
-| Log Analysis | `POST /log-analyze` | Analyze HTTP logs such as 499, 502, 504, and timeout |
-| Ticket Reply | `POST /ticket-reply` | Generate a professional English customer reply draft |
-
-## API Endpoints
-
-| API | Method | Purpose |
-| --- | --- | --- |
-| `/health` | GET | Service health check |
-| `/docs` | GET | Swagger API documentation |
-| `/chat` | POST | RAG-based support Q&A |
-| `/ticket-triage` | POST | Ticket classification and triage |
-| `/api-debug` | POST | API error troubleshooting |
-| `/log-analyze` | POST | HTTP log analysis |
-| `/ticket-reply` | POST | English ticket reply generation |
+1. Knowledge Base Q&A
+2. Ticket Triage
+3. API Error Analysis
+4. HTTP Log Analysis
+5. Customer Reply Generation
+6. Escalation Information Collection
+7. RAG-style Retrieval
+8. Dockerized Deployment
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    User["Support Engineer"] --> API["FastAPI Backend"]
+    Client["Client / Postman / API Caller"] --> API["FastAPI Service"]
+    API --> Rule["Prompt / Rule Engine"]
+    API --> RAG["RAG-style Retrieval"]
+    Rule --> Response["Structured Support Response"]
+    RAG --> KB["Markdown Knowledge Base"]
+    RAG --> VectorDB["Chroma Vector Store"]
+    RAG --> LLM["LLM Provider"]
+    KB --> VectorDB
+    LLM --> Response
+```
 
-    API --> Triage["Ticket Triage"]
-    API --> Debug["API Debug"]
-    API --> Logs["HTTP Log Analysis"]
-    API --> Reply["English Ticket Reply"]
-    API --> Chat["RAG Chat"]
+## Tech Stack
 
-    Chat --> Classifier["Question Classifier"]
-    Chat --> Retriever["LangChain Retriever"]
-    Retriever --> Chroma["Chroma Vector DB"]
-    Retriever --> KB["Markdown Knowledge Base"]
-    Chat --> Prompt["Prompt Manager"]
-    Prompt --> LLM["OpenAI / Qwen API"]
+- Python
+- FastAPI
+- Pydantic
+- Markdown Knowledge Base
+- LangChain
+- Chroma
+- Embedding
+- Docker
+- Postman
+- RESTful API
+- LLM API / Mockable LLM Provider
 
-    API --> JSON["Structured JSON"]
+## Project Structure
+
+```text
+.
+├── main.py
+├── rag_service.py
+├── prompt_manager.py
+├── classifier.py
+├── log_analyzer.py
+├── knowledge/
+├── examples/
+├── postman/
+├── eval/
+├── TEST_RESULT.md
+├── Dockerfile
+├── docker-compose.yml
+├── README.md
+└── README_EN.md
 ```
 
 ## Quick Start
 
-### 1. Clone
-
 ```bash
 git clone https://github.com/HAHAL/cloudsupport-ai.git
 cd cloudsupport-ai
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
 ```
 
-### 2. Environment Variables
-
-Rule-based APIs can run with an empty `.env` file:
-
-```bash
-touch .env
-```
-
-For full `/chat` RAG + LLM behavior, configure an API key:
-
-```env
-LLM_PROVIDER=openai
-EMBEDDING_PROVIDER=openai
-OPENAI_API_KEY=your_openai_key
-
-# Or Qwen / DashScope compatible endpoint
-# LLM_PROVIDER=qwen
-# EMBEDDING_PROVIDER=qwen
-# DASHSCOPE_API_KEY=your_dashscope_key
-```
-
-### 3. Run with Docker
+Docker:
 
 ```bash
 docker compose up --build -d
 ```
 
-Open Swagger:
+Swagger:
 
 ```text
 http://localhost:8000/docs
 ```
 
+## API Documentation
+
+| API | Method | Purpose |
+| --- | --- | --- |
+| `/health` | GET | Service health check |
+| `/docs` | GET | OpenAPI documentation |
+| `/chat` | POST | RAG-based support Q&A |
+| `/ticket-triage` | POST | Ticket classification and triage |
+| `/api-debug` | POST | API error troubleshooting |
+| `/log-analyze` | POST | HTTP log analysis |
+| `/ticket-reply` | POST | Customer reply generation |
+| `/escalation-info` | POST | Escalation information collection |
+
+## Knowledge Base
+
+The knowledge base covers CDN, DNS, HTTPS, HTTP status codes, video streaming, Kubernetes, LLM API errors, rate limit, timeout, authentication errors, RAG retrieval quality, and Function Calling schema issues.
+
 ## Postman Usage
 
-Import the collection:
+Import:
 
 ```text
 postman/CloudSupport-AI.postman_collection.json
@@ -129,96 +128,28 @@ Default variable:
 base_url = http://localhost:8000
 ```
 
-Sample request bodies:
-
-```text
-examples/
-├── cdn_504_ticket.json
-├── llm_api_401_error.json
-├── llm_api_429_error.json
-├── video_first_frame_slow.json
-└── english_ticket_reply.json
-```
-
-## Knowledge Base
-
-The `knowledge/` directory contains sample support documents:
-
-```text
-knowledge/
-├── cdn/
-├── dns/
-├── https/
-├── video/
-├── kubernetes/
-└── llm/
-```
-
-Covered scenarios include:
-
-- CDN 502/504
-- CDN cache miss and high TTFB
-- DNS resolution failure
-- TLS certificate issue
-- Video first frame slow
-- HLS playback stutter
-- Kubernetes Pod Pending
-- LLM API 401/429/5xx
-- Prompt optimization
-- RAG retrieval quality
-- Function Calling schema errors
-
-Each document follows a support-oriented structure:
-
-- Scenario
-- Symptoms
-- Possible Causes
-- Troubleshooting Steps
-- Required Information
-- Escalation Criteria
-
 ## Test Result
 
 See [TEST_RESULT.md](TEST_RESULT.md).
 
-Verified APIs:
+## Design Notes
 
-- `GET /health`
-- `GET /docs`
-- `POST /chat`
-- `POST /ticket-triage`
-- `POST /api-debug`
-- `POST /log-analyze`
-- `POST /ticket-reply`
+1. Rule-based logic is combined with LLM output for stable first-response behavior.
+2. Support responses are structured for consistent downstream display and review.
+3. Escalation information is collected explicitly to reduce repeated communication.
+4. Markdown knowledge base files are used for lightweight RAG-style retrieval.
+5. The workflow can be extended to internal ticket systems through API integration.
 
-## Interview Talking Points
+## Limitations
 
-- Why RAG is suitable for technical support scenarios
-- How ticket triage improves first response quality
-- How to troubleshoot LLM API errors such as 401, 429, and 5xx
-- How Prompt Engineering controls output format and reduces hallucination
-- How English ticket replies reduce communication cost for overseas customers
-- How to collect required information before escalating issues
-- What should be added before production use: authentication, rate limiting, monitoring, evaluation, access control, and audit logs
+This project is a prototype for technical support workflow validation. It does not connect to real customer data or production ticket systems by default.
 
-## Limitations and Future Improvements
+## Roadmap
 
-This project is a personal practice and interview demo project, not a production system.
-
-Future improvements:
-
-- Add authentication and role-based access control
-- Add API rate limiting and request audit logs
-- Add Prometheus and Grafana monitoring
-- Add RAG evaluation dataset and answer quality scoring
-- Add multi-tenant knowledge base isolation
-- Add conversation history and ticket context memory
-- Add CI/CD workflow for automated tests
-- Add persistent ticket storage and search
-- Add frontend UI for support engineers
-
-## Scope
-
-- All examples are simulated support scenarios.
-- Rule-based fallback is used for stable demonstration.
-- Full RAG chat requires a valid LLM and embedding API key.
+- Connect to real vector database
+- Integrate with ticket systems
+- Add authentication
+- Add observability metrics
+- Add multi-tenant knowledge base
+- Add evaluation dataset for support answers
+- Add web UI
