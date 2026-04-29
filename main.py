@@ -68,6 +68,9 @@ class TicketTriageResponse(BaseModel):
     missing_info: list[str]
     next_actions: list[str]
     confidence: float
+    impact_scope: str
+    required_info: list[str]
+    suggested_owner: str
 
 
 class ApiDebugRequest(BaseModel):
@@ -87,6 +90,11 @@ class ApiDebugResponse(BaseModel):
     required_info: list[str]
     severity: str
     confidence: float
+    issue_summary: str
+    possible_causes: list[str]
+    required_customer_info: list[str]
+    temporary_workaround: list[str]
+    escalation_needed: bool
 
 
 class LogAnalyzeRequest(BaseModel):
@@ -119,6 +127,10 @@ class TicketReplyResponse(BaseModel):
     need_customer_confirm: list[str]
     tone: str
     confidence: float
+    customer_reply: str
+    internal_notes: list[str]
+    next_actions: list[str]
+    escalation_condition: list[str]
 
 
 class EscalationInfoRequest(BaseModel):
@@ -141,8 +153,8 @@ STATUS_CODE_KNOWLEDGE: dict[int, dict[str, Any]] = {
     400: {
         "type": "bad_request",
         "explanation": "400 Bad Request means the request parameters, body, or headers do not match the API contract.",
-        "causes": ["Missing or invalid parameters", "Invalid JSON payload", "Required headers or signature fields are missing"],
-        "steps": ["Compare the request with the API documentation", "Verify Content-Type, JSON format, and required fields", "Keep the request ID for server-side log lookup"],
+        "causes": ["Missing or invalid parameters", "Invalid JSON payload", "Model name, message format, or context length is invalid"],
+        "steps": ["Compare the request with the API documentation", "Verify model name, Content-Type, JSON format, and required fields", "Check context length, message format, and max_tokens settings"],
     },
     401: {
         "type": "auth_failed",
@@ -168,6 +180,12 @@ STATUS_CODE_KNOWLEDGE: dict[int, dict[str, Any]] = {
         "causes": ["RPM/TPM/QPS limit exceeded", "Concurrent requests are too high", "Workspace quota, billing, or model entitlement is insufficient"],
         "steps": ["Add retry with exponential backoff and jitter", "Check RPM/TPM/QPS, quota, and billing status", "Reduce concurrency or request a quota increase"],
     },
+    408: {
+        "type": "request_timeout",
+        "explanation": "408 Request Timeout means the client or gateway timed out before the request completed.",
+        "causes": ["Request body is too large", "Network path is slow or unstable", "Client timeout is shorter than model inference time"],
+        "steps": ["Reduce prompt size and max output tokens", "Check client, proxy, and gateway timeout settings", "Compare streaming and non-streaming behavior"],
+    },
     500: {
         "type": "server_error",
         "explanation": "500 Internal Server Error means the backend encountered an unexpected error.",
@@ -185,6 +203,12 @@ STATUS_CODE_KNOWLEDGE: dict[int, dict[str, Any]] = {
         "explanation": "504 Gateway Timeout means the CDN, gateway, or load balancer timed out while waiting for the origin response.",
         "causes": ["Origin response latency is high", "Upstream network timeout or packet loss", "Database/cache/third-party dependency is slow", "Gateway or CDN timeout is shorter than origin processing time"],
         "steps": ["Compare request_time and upstream_response_time", "Check application slow logs and dependency latency", "Verify origin connectivity and evaluate CDN/gateway timeout settings"],
+    },
+    503: {
+        "type": "service_unavailable",
+        "explanation": "503 Service Unavailable means the upstream model service or gateway is temporarily unavailable.",
+        "causes": ["Temporary model service unavailability", "Gateway or upstream overload", "Regional service instability"],
+        "steps": ["Retry with exponential backoff", "Compare other models or regions if available", "Collect request ID, timestamp, model name, and response body for escalation"],
     },
     499: {
         "type": "client_abort",
@@ -236,6 +260,9 @@ def ticket_triage(payload: TicketTriageRequest) -> TicketTriageResponse:
         missing_info=_missing_info_for_support(text, category),
         next_actions=_next_actions_for_category(category, status_codes),
         confidence=0.78 if keywords else 0.55,
+        impact_scope=_impact_scope(text, priority),
+        required_info=_missing_info_for_support(text, category),
+        suggested_owner=_assigned_team(category),
     )
 
 
@@ -255,6 +282,9 @@ def api_debug(payload: ApiDebugRequest) -> ApiDebugResponse:
     )
     status_code = payload.status_code or _first_status_code(text)
     knowledge = STATUS_CODE_KNOWLEDGE.get(status_code or 0)
+    likely_causes = knowledge["causes"] if knowledge else _generic_api_causes(text)
+    troubleshooting_steps = knowledge["steps"] if knowledge else _generic_api_steps()
+    required_info = _required_debug_info(payload)
 
     return ApiDebugResponse(
         problem_type=knowledge["type"] if knowledge else _infer_problem_from_text(text),
@@ -263,11 +293,16 @@ def api_debug(payload: ApiDebugRequest) -> ApiDebugResponse:
             if status_code and knowledge
             else "No explicit HTTP status code was provided. Continue the investigation with the error message, request ID, and server-side logs."
         ),
-        likely_causes=knowledge["causes"] if knowledge else _generic_api_causes(text),
-        troubleshooting_steps=knowledge["steps"] if knowledge else _generic_api_steps(),
-        required_info=_required_debug_info(payload),
+        likely_causes=likely_causes,
+        troubleshooting_steps=troubleshooting_steps,
+        required_info=required_info,
         severity=_severity_from_status(status_code),
         confidence=0.82 if knowledge else 0.58,
+        issue_summary=_api_issue_summary(payload, status_code),
+        possible_causes=likely_causes,
+        required_customer_info=required_info,
+        temporary_workaround=_temporary_workaround(status_code, text),
+        escalation_needed=_escalation_needed_for_api(status_code, text),
     )
 
 
@@ -335,6 +370,14 @@ def ticket_reply(payload: TicketReplyRequest) -> TicketReplyResponse:
         need_customer_confirm=missing_info,
         tone="professional",
         confidence=0.76,
+        customer_reply=reply,
+        internal_notes=[
+            f"Detected support category: {category}",
+            "Do not confirm the root cause until request IDs, timestamps, raw errors, and reproduction evidence are reviewed.",
+            "Use the required information list to drive the next customer update.",
+        ],
+        next_actions=actions,
+        escalation_condition=_escalation_criteria(category, status_codes),
     )
 
 
@@ -499,6 +542,17 @@ def _triage_reason(
     )
 
 
+def _impact_scope(text: str, priority: str) -> str:
+    lowered = text.lower()
+    if any(word in lowered for word in ["all users", "global", "全站", "大面积"]):
+        return "broad impact"
+    if any(word in lowered for word in ["enterprise", "paid users", "checkout", "payment", "production"]):
+        return "business-critical path"
+    if priority in {"p0", "p1"}:
+        return "high priority impact, scope requires confirmation"
+    return "limited or unknown impact"
+
+
 def _next_actions_for_category(category: str, status_codes: list[int]) -> list[str]:
     if status_codes:
         code = status_codes[0]
@@ -576,6 +630,10 @@ def _extract_evidence(log_text: str) -> list[str]:
 
 def _infer_problem_from_text(text: str) -> str:
     lowered = text.lower()
+    if "context_length_exceeded" in lowered or "context length" in lowered:
+        return "context_length_exceeded"
+    if "stream interrupted" in lowered or "connection reset" in lowered:
+        return "stream_interrupted"
     if "timeout" in lowered or "超时" in lowered:
         return "timeout"
     if "auth" in lowered or "unauthorized" in lowered or "鉴权" in lowered:
@@ -589,6 +647,10 @@ def _infer_problem_from_text(text: str) -> str:
 
 def _generic_api_causes(text: str) -> list[str]:
     problem = _infer_problem_from_text(text)
+    if problem == "context_length_exceeded":
+        return ["Prompt, chat history, or RAG context exceeds the model context window", "Top-K or chunk size may be too large", "max_tokens may leave insufficient room for input"]
+    if problem == "stream_interrupted":
+        return ["Streaming connection was interrupted by client, proxy, or gateway", "Read timeout is too short", "Output length or inference time is too high for the current connection"]
     if problem == "timeout":
         return ["Client or gateway timeout", "Backend processing latency is too high", "Upstream dependency is slow or unstable"]
     if problem == "auth_failed":
@@ -600,6 +662,44 @@ def _generic_api_causes(text: str) -> list[str]:
 
 def _generic_api_steps() -> list[str]:
     return ["Keep the full URL, method, headers, request body, and response body", "Use request ID to query backend trace logs", "Compare parameters between successful and failed requests"]
+
+
+def _api_issue_summary(payload: ApiDebugRequest, status_code: int | None) -> str:
+    method = payload.method or "unknown method"
+    url = payload.url or "unknown endpoint"
+    status = status_code or "unknown status"
+    message = payload.error_message or payload.response_body or "no error message provided"
+    return f"{method} {url} returned {status}. Observed error: {message}"
+
+
+def _temporary_workaround(status_code: int | None, text: str) -> list[str]:
+    problem = _infer_problem_from_text(text)
+    if problem == "context_length_exceeded":
+        return ["Reduce chat history, RAG Top-K, chunk size, or max output tokens", "Summarize long context before sending it to the model"]
+    if problem == "stream_interrupted":
+        return ["Increase client read timeout and check proxy buffering", "Reduce max output tokens or switch to non-streaming mode for comparison"]
+    if status_code == 401:
+        return ["Regenerate or rotate the API key", "Verify environment variable loading and endpoint permission with a minimal request"]
+    if status_code == 403:
+        return ["Use an account or workspace with the required model permission", "Check region, allowlist, and security policy before retrying"]
+    if status_code == 400:
+        return ["Reduce the request to a minimal valid payload", "Validate model name, message format, and context length before retrying"]
+    if status_code == 429 or problem == "rate_limited":
+        return ["Apply exponential backoff with jitter", "Reduce concurrency and token usage while checking quota or billing status"]
+    if status_code in {408, 504} or problem == "timeout":
+        return ["Reduce prompt size or max output tokens", "Increase client timeout where appropriate and retry non-idempotent operations carefully"]
+    if status_code and status_code >= 500:
+        return ["Retry with exponential backoff", "Fail over to a fallback model or endpoint if available"]
+    return ["Collect request evidence and retry with a minimal reproducible request"]
+
+
+def _escalation_needed_for_api(status_code: int | None, text: str) -> bool:
+    lowered = text.lower()
+    if status_code in {500, 502, 503, 504}:
+        return True
+    if status_code in {401, 403, 429} and "request" in lowered:
+        return True
+    return any(keyword in lowered for keyword in ["persistent", "reproducible", "stream interrupted", "context_length_exceeded"])
 
 
 def _generic_log_causes(log_text: str) -> list[str]:

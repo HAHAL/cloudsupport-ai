@@ -53,6 +53,50 @@ flowchart LR
     LLM --> SupportJSON
 ```
 
+## LLM API 支持场景
+
+CloudSupport AI 重点覆盖大模型 API 售后支持中的高频问题：
+
+- `401 Unauthorized`: API Key 错误、Token 过期、签名失败、鉴权 Header 缺失。
+- `403 Forbidden`: 模型权限不足、账号权限不足、区域限制、安全策略拦截。
+- `400 Bad Request`: 参数错误、模型名称错误、消息格式错误、上下文超长。
+- `429 Too Many Requests`: QPS、RPM、TPM、并发数、配额或账单限制。
+- `408 / 504 / timeout`: 网络超时、模型推理耗时过长、网关超时、请求体过大。
+- `5xx`: 模型服务异常、平台波动、上游服务异常或临时不可用。
+- `stream interrupted`: 流式输出被代理、网关、客户端超时或网络中断。
+- `context_length_exceeded`: 输入上下文超过模型窗口。
+
+这些场景通过 `/api-debug`、`/log-analyze`、`/ticket-reply` 和 `/escalation-info` 组合成一个轻量支持工作流。
+
+## RAG 知识库流程
+
+```mermaid
+flowchart TD
+    Doc["Markdown / TXT / PDF Knowledge Files"] --> Loader["Document Loader"]
+    Loader --> Splitter["Chunk Splitter"]
+    Splitter --> Embedding["Embedding Model"]
+    Embedding --> Chroma["Chroma Vector Store"]
+    Question["Support Question"] --> Retriever["Top-K Retriever"]
+    Chroma --> Retriever
+    Retriever --> Prompt["Prompt Assembly<br/>Question + Context + Constraints"]
+    Prompt --> LLM["LLM Provider"]
+    LLM --> Answer["Answer + References"]
+```
+
+RAG 流程用于把支持知识库中的排障步骤、状态码解释和升级条件检索出来，再与用户问题拼接成受约束的 Prompt，最终返回答案和引用来源。
+
+## Prompt 模板设计
+
+项目中的 Prompt 设计遵循以下原则：
+
+1. 明确角色：技术支持专家、日志分析专家、工单分诊专家或客户回复助手。
+2. 明确输入：问题、上下文、日志、工单描述、状态码、缺失信息。
+3. 明确输出：要求结构化 JSON 或专业客户回复。
+4. 明确约束：不要编造上下文不存在的信息；证据不足时输出需要补充的信息。
+5. 明确升级条件：当问题需要专项支持或产品工程确认时，收集 request ID、时间、区域、日志和复现步骤。
+
+更详细的模板说明见 [docs/prompt-templates.md](docs/prompt-templates.md)。
+
 ## 技术栈
 
 - Python
@@ -380,6 +424,13 @@ base_url = http://localhost:8000
 ```text
 examples/
 ```
+
+## 相关文档
+
+- [LLM API 错误码排查](docs/llm-api-troubleshooting.md)
+- [RAG 工作流与检索质量排查](docs/rag-workflow.md)
+- [Prompt 模板设计](docs/prompt-templates.md)
+- [客户回复模板](docs/customer-reply-templates.md)
 
 ## 测试结果
 

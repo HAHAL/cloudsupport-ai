@@ -1,0 +1,41 @@
+[
+  {
+    "endpoint": "/chat",
+    "payload": {
+      "question": "CDN returns intermittent 504, how should we troubleshoot origin timeout and upstream response time?"
+    },
+    "expected_focus": [
+      "origin connectivity",
+      "upstream_response_time",
+      "request ID",
+      "timestamp",
+      "direct origin access"
+    ]
+  },
+  {
+    "endpoint": "/chat",
+    "payload": {
+      "question": "LLM API returns 429 Too Many Requests, what information should support collect?"
+    },
+    "expected_focus": [
+      "rate limit",
+      "quota",
+      "RPM",
+      "TPM",
+      "exponential backoff"
+    ]
+  },
+  {
+    "endpoint": "/chat",
+    "payload": {
+      "question": "RAG answer is inaccurate. How can we debug retrieval quality?"
+    },
+    "expected_focus": [
+      "chunk size",
+      "embedding model",
+      "Top-K",
+      "metadata filter",
+      "reranking"
+    ]
+  }
+]
