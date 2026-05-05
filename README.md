@@ -1,88 +1,48 @@
 # CloudSupport AI：企业知识库 AI 技术支持助手
 
-CloudSupport AI 是一个面向企业技术支持、SaaS 产品支持和 AI 应用交付场景的智能支持助手。项目基于 FastAPI、RAG、Prompt Engineering、Markdown 知识库和规则兜底能力，支持知识库问答、工单分诊、API 报错分析、日志分析、客户回复生成、升级信息收集和回答反馈记录。
+CloudSupport AI 是一个面向企业技术支持、SaaS 产品支持、AI 应用支持和知识库问答场景的智能支持助手。项目基于 FastAPI、RAG、Prompt Engineering、Markdown 知识库和规则兜底能力，支持知识库问答、工单分诊、API 报错分析、日志分析、客户回复生成、升级信息收集和回答反馈记录。
 
-项目默认不依赖外部大模型 API Key。未配置模型服务时，系统仍可通过规则兜底能力完成主要工作流演示；配置 OpenAI、通义千问或兼容 OpenAI 协议的模型服务后，可以启用更完整的 RAG 知识库回答。
+项目提供 Web 控制台、Swagger API 文档、Docker 部署和 GitHub Actions CI/CD 流程。默认不依赖外部大模型 API Key，未配置模型服务时也可以通过规则兜底完成主要流程验证；配置 OpenAI、通义千问或兼容 OpenAI 协议的模型服务后，可以启用更完整的 RAG 知识库回答。
 
 ## 项目简介
 
-CloudSupport AI 用于帮助技术支持人员快速理解客户问题，并把常见支持流程转化为结构化、可复用的 API 和 Web 控制台能力。它适用于企业知识库问答、SaaS 产品支持、AI 应用支持、API 错误分析、HTTP 日志分析、工单分诊、客户回复生成、升级信息收集和回答质量反馈。
+CloudSupport AI 将企业支持工作中的常见动作抽象为可复用的工作流：理解客户问题、分类工单、分析 API 错误、解析日志、生成客户回复、整理升级信息，并通过反馈记录持续改进知识库和 Prompt。
 
-项目目标：
+它适用于以下场景：
 
-- 帮助技术支持人员快速理解客户问题。
-- 根据企业知识库生成标准化排查建议。
-- 对 API 报错、日志片段、状态码异常进行初步分析。
-- 生成专业、克制、可直接发给客户的回复草稿。
-- 在需要升级时生成研发、运维或平台团队所需的信息清单。
-- 沉淀支持流程，提升问题处理一致性。
-- 通过 Web 控制台和 Swagger 同时支持可视化操作与接口调试。
+- 企业技术支持团队处理客户问题。
+- SaaS 产品支持团队分析登录、权限、接口和页面异常。
+- AI 应用支持团队排查 LLM API、RAG 检索和 Prompt 输出问题。
+- 应用运维团队分析 5xx、超时、反向代理和部署异常。
+- 内部知识库问答与支持流程标准化。
+
+## 项目背景
+
+在企业技术支持场景中，常见问题包括接口报错、登录失败、权限异常、服务不可用、上游超时、客户描述不完整、知识库检索效率低等。传统处理方式依赖人工经验，容易出现排查步骤不统一、客户回复不规范、升级信息缺失等问题。
+
+CloudSupport AI 尝试将技术支持流程标准化，通过规则兜底、知识库检索和可选大模型生成能力，帮助支持人员快速完成问题初判、排查建议生成、客户回复和升级摘要整理。
 
 ## 核心功能
 
-### 1. 知识库问答
-
-- 支持基于 Markdown 文档的知识库检索。
-- 支持用户输入自然语言问题。
-- 返回问题判断、排查步骤、需要补充的信息和参考来源。
-- 未配置外部模型 Key 时，返回本地规则兜底回答。
-
-### 2. 工单分诊
-
-- 根据客户问题标题、描述、客户等级、影响范围识别问题类型。
-- 输出优先级、初步判断、下一步处理建议、建议负责人和 SLA 建议。
-- 覆盖 CDN、DNS、HTTPS、视频播放、Kubernetes、LLM API 和通用云产品问题。
-
-### 3. API 报错分析
-
-- 支持 `400`、`401`、`403`、`404`、`408`、`429`、`500`、`502`、`503`、`504` 等常见状态码分析。
-- 输出可能原因、排查步骤、客户需补充信息、临时处理建议和升级判断。
-- 适用于 SaaS API、LLM API、网关 API 和后端服务接口排障。
-
-### 4. 日志分析
-
-- 支持输入 Nginx、应用日志、API 调用日志片段。
-- 提取 `status`、`request_time`、`upstream_response_time`、`request_id`、`error` 等关键字段。
-- 输出初步诊断建议、证据片段、缺失信息和后续排查方向。
-
-### 5. 客户回复生成
-
-- 根据问题背景和分析结论，生成专业、克制、可发送给客户的回复草稿。
-- 输出客户回复、内部备注、下一步动作和升级条件。
-- 避免在证据不足时直接下最终结论。
-
-### 6. 升级信息收集
-
-- 当问题需要升级到研发、运维或平台团队时，生成需要补充的信息清单。
-- 输出升级摘要、建议负责人、升级条件和临时处理建议。
-- 帮助减少缺少 request ID、时间戳、日志、复现步骤导致的重复沟通。
-
-### 7. 回答反馈
-
-- 支持对 AI 或规则回答进行 `useful` / `not_useful` 标记。
-- 反馈保存到本地 JSONL 文件：`feedback/answer_feedback.jsonl`。
-- 可用于后续优化知识库内容、Prompt 模板和规则兜底逻辑。
-
-### 8. Web 控制台
-
-- 提供轻量级可视化页面。
-- 支持 API 报错分析、日志分析、工单分诊、客户回复生成、知识库问答、升级信息收集和反馈提交。
-- 与 Swagger `/docs` 并存，便于操作演示和接口调试。
+| 功能模块 | 说明 | 示例场景 |
+| --- | --- | --- |
+| 企业知识库问答 | 基于 Markdown 知识库返回排查建议、参考来源和需要补充的信息。 | RAG 回答不准确如何排查。 |
+| API 报错分析 | 分析 `400`、`401`、`403`、`404`、`408`、`429`、`500`、`502`、`503`、`504` 等状态码。 | API 返回 `429 Too Many Requests`。 |
+| 日志分析 | 提取 `status`、`request_time`、`upstream_response_time`、`request_id`、`error` 等字段。 | `504 upstream timed out`。 |
+| 工单分诊 | 根据问题标题、描述、客户等级、影响范围判断问题类型和优先级。 | 客户登录系统时报 `403`。 |
+| 客户回复生成 | 生成专业、克制、可复制到工单中的回复草稿。 | 针对权限异常收集账号、时间、request ID 和截图。 |
+| 升级信息收集 | 输出升级摘要、缺失信息、建议负责人和临时处理建议。 | 需要转研发、运维或平台团队。 |
+| 回答反馈 | 记录 `useful` / `not_useful` 反馈。 | 用于后续优化知识库和 Prompt。 |
+| Web 控制台 | 提供可视化操作入口。 | 部署后直接在浏览器中完成完整流程验证。 |
+| Swagger 文档 | 提供接口调试和 API 验证入口。 | 访问 `/docs` 调试接口。 |
+| CI/CD 流程 | 基于 GitHub Actions 完成依赖安装、语法检查、健康检查、Docker 构建和服务器部署。 | 代码提交后自动执行 CI，手动触发 Deploy 发布到服务器。 |
 
 ## 技术架构
-
-- FastAPI：提供 RESTful API、Swagger 文档和 Web 控制台入口。
-- Markdown Knowledge Base：维护产品文档、FAQ、故障手册和支持流程。
-- RAG Pipeline：文档切分、检索、上下文拼接、回答生成。
-- Prompt Templates：约束输出格式和回复风格。
-- Rule-based Fallback：在没有配置 LLM Key 时，也可以演示规则分析能力。
-- Static Web Console：通过 HTML、CSS、JavaScript 调用后端接口。
-- Docker Compose：用于本地和服务器部署。
 
 ```text
 User / Support Engineer
         ↓
-Web Console / Swagger Docs
+Web Console / Swagger
         ↓
 FastAPI REST API
         ↓
@@ -95,6 +55,67 @@ Markdown Knowledge Base / Feedback JSONL
 Structured Diagnosis / Reply Draft / Escalation Summary
 ```
 
+核心设计：
+
+- FastAPI 负责 API 路由、Swagger 文档和 Web 控制台入口。
+- RAG Service 负责知识库文档加载、切分、检索和回答生成。
+- Rule Engine 在没有模型 Key 时提供稳定的兜底分析。
+- Prompt Templates 约束输出结构、诊断字段和客户回复风格。
+- Feedback JSONL 记录回答质量反馈，便于后续优化知识库和规则。
+- Docker Compose 负责本地和服务器部署。
+- GitHub Actions 负责基础 CI 检查和手动部署流程。
+
+## 技术栈
+
+| 类型 | 技术 |
+| --- | --- |
+| 后端框架 | Python, FastAPI, Pydantic |
+| AI 应用 | LangChain, RAG, Prompt Engineering |
+| 知识库 | Markdown, TXT, PDF, Chroma |
+| 前端页面 | HTML, CSS, JavaScript |
+| 部署 | Docker, Docker Compose |
+| 自动化 | GitHub Actions |
+| 接口调试 | Swagger, Postman, curl |
+| 反馈记录 | JSONL 本地文件 |
+
+## 项目结构
+
+```text
+cloudsupport-ai/
+├── main.py
+├── app/
+├── static/
+│   ├── index.html
+│   ├── app.js
+│   └── style.css
+├── knowledge/
+│   ├── api/
+│   ├── web-app/
+│   ├── deployment/
+│   ├── ai-support/
+│   └── support-process/
+├── examples/
+├── postman/
+├── docs/
+│   ├── images/
+│   └── videos/
+├── scripts/
+│   ├── deploy.sh
+│   └── health_check.sh
+├── data/
+├── Dockerfile
+├── docker-compose.yml
+├── .github/workflows/
+│   ├── ci.yml
+│   └── deploy.yml
+├── requirements.txt
+├── .env.example
+├── README.md
+└── README_EN.md
+```
+
+说明：当前后端保持轻量结构，核心服务文件位于项目根目录；`app/` 目录为后续模块化拆分预留。Web 控制台位于 `static/`。
+
 ## Web 控制台
 
 启动服务后访问：
@@ -103,25 +124,25 @@ Structured Diagnosis / Reply Draft / Escalation Summary
 http://localhost:8000/
 ```
 
-控制台包含以下工作流：
+Web 控制台支持：
 
-- 知识库问答
+- 企业知识库问答
 - 工单分诊
 - API 报错分析
 - 日志分析
 - 客户回复生成
 - 升级信息收集
-- 回答反馈提交
+- `useful` / `not_useful` 反馈提交
 
-## API 文档
+结果区域默认展示结构化诊断报告卡片，包含问题摘要、可能原因、排查步骤、需要补充的信息、客户回复建议和升级条件。原始 JSON 保留为调试信息，默认折叠。
+
+## API 接口
 
 Swagger / OpenAPI 文档地址：
 
 ```text
 http://localhost:8000/docs
 ```
-
-## API 接口
 
 | API | Method | 说明 |
 | --- | --- | --- |
@@ -135,9 +156,97 @@ http://localhost:8000/docs
 | `/feedback` | POST | 回答反馈记录 |
 | `/docs` | GET | Swagger API 文档 |
 
-## 快速启动
+### API 示例
 
-### 本地启动
+企业知识库问答：
+
+```bash
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "企业知识库问答结果不准确，应该如何排查？"
+  }'
+```
+
+工单分诊：
+
+```bash
+curl -X POST http://localhost:8000/ticket-triage \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "客户反馈登录系统时报 403",
+    "description": "客户使用企业账号登录后台时提示 Forbidden，影响部分用户访问。",
+    "customer_level": "enterprise",
+    "affected_product": "SaaS Platform"
+  }'
+```
+
+API 报错分析：
+
+```bash
+curl -X POST http://localhost:8000/api-debug \
+  -H "Content-Type: application/json" \
+  -d '{
+    "method": "POST",
+    "url": "https://api.example.com/v1/chat/completions",
+    "status_code": 429,
+    "error_message": "Too Many Requests: rate limit exceeded for current workspace.",
+    "request_id": "req_sample_20260505_001"
+  }'
+```
+
+日志分析：
+
+```bash
+curl -X POST http://localhost:8000/log-analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "log_text": "status=504 request_time=60.001 upstream_response_time=60.000 error=\"upstream timed out\" request_id=req_504_demo",
+    "question": "为什么接口返回 504？"
+  }'
+```
+
+## 知识库结构
+
+推荐将企业知识库整理为以下通用结构：
+
+```text
+knowledge/
+├── api/
+│   ├── authentication-errors.md
+│   ├── permission-errors.md
+│   ├── rate-limit-errors.md
+│   ├── timeout-errors.md
+│   └── status-code-troubleshooting.md
+├── web-app/
+│   ├── login-failure.md
+│   ├── page-slow.md
+│   ├── service-unavailable.md
+│   └── cors-issue.md
+├── deployment/
+│   ├── docker-deploy-troubleshooting.md
+│   ├── nginx-reverse-proxy.md
+│   └── database-connection-error.md
+├── ai-support/
+│   ├── rag-retrieval-quality.md
+│   ├── prompt-optimization.md
+│   ├── hallucination-control.md
+│   └── llm-api-errors.md
+└── support-process/
+    ├── ticket-triage.md
+    ├── customer-reply-template.md
+    └── escalation-checklist.md
+```
+
+当前仓库保留了部分历史知识库文件，可逐步迁移到上述通用目录。推荐优先沉淀：
+
+- API 鉴权、权限、限流、超时和状态码排查。
+- Web 应用登录失败、页面慢、服务不可用和跨域问题。
+- Docker 部署、反向代理和数据库连接异常。
+- AI 应用中的 RAG 检索质量、Prompt 优化、幻觉控制和 LLM API 错误。
+- 工单分诊、客户回复模板和升级检查清单。
+
+## 快速开始
 
 ```bash
 git clone https://github.com/HAHAL/cloudsupport-ai.git
@@ -155,10 +264,23 @@ Web 控制台: http://localhost:8000/
 Swagger:    http://localhost:8000/docs
 ```
 
-### Docker 启动
+健康检查：
+
+```bash
+curl -f http://127.0.0.1:8000/health
+```
+
+## Docker 部署
+
+启动服务：
 
 ```bash
 docker compose up --build -d
+```
+
+查看状态和日志：
+
+```bash
 docker compose ps
 docker compose logs -f
 ```
@@ -175,6 +297,14 @@ curl -f http://127.0.0.1:8000/health
 docker compose down
 ```
 
+Docker Compose 默认映射端口 `8000:8000`，并挂载：
+
+- `./knowledge:/app/knowledge`
+- `./chroma_data:/app/chroma_data`
+- `./data:/app/data`
+
+其中 `data/` 用于保存反馈 JSONL 等运行时数据，不提交到仓库。
+
 ## 环境变量
 
 规则兜底接口和 Web 控制台不需要外部模型 Key。完整 RAG 回答可按需配置模型服务：
@@ -190,161 +320,13 @@ OPENAI_API_KEY=your_openai_key
 # DASHSCOPE_API_KEY=your_dashscope_key
 ```
 
-不要将真实 API Key 提交到仓库。建议通过服务器环境变量或本地 `.env` 文件配置。
-
-## API 示例
-
-### 知识库问答
-
-```bash
-curl -X POST http://localhost:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "question": "LLM API 返回 429 Too Many Requests，应该如何排查？"
-  }'
-```
-
-### 工单分诊
-
-```bash
-curl -X POST http://localhost:8000/ticket-triage \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Enterprise customer reports LLM API timeout",
-    "description": "The customer reports intermittent timeout when calling chat/completions. The issue affects production workflow in Singapore region.",
-    "customer_level": "enterprise",
-    "affected_product": "LLM API"
-  }'
-```
-
-### API 报错分析
-
-```bash
-curl -X POST http://localhost:8000/api-debug \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "POST",
-    "url": "https://api.example.com/v1/chat/completions",
-    "status_code": 429,
-    "error_message": "Too Many Requests: rate limit exceeded for current workspace.",
-    "request_id": "req_sample_20260505_001"
-  }'
-```
-
-### 日志分析
-
-```bash
-curl -X POST http://localhost:8000/log-analyze \
-  -H "Content-Type: application/json" \
-  -d '{
-    "log_text": "2026-05-05T10:15:20+08:00 status=504 request_time=60.001 upstream_response_time=60.000 request_id=req_sample_001 error=\"upstream timed out\"",
-    "question": "Why did this API request return 504?"
-  }'
-```
-
-### 客户回复生成
-
-```bash
-curl -X POST http://localhost:8000/ticket-reply \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_title": "LLM API timeout during peak traffic",
-    "ticket_description": "Customer reports timeout when calling the model endpoint.",
-    "analysis_context": "Possible timeout or request-size issue. Need request ID, timestamp, model name, and retry behavior.",
-    "customer_name": "Customer"
-  }'
-```
-
-### 升级信息收集
-
-```bash
-curl -X POST http://localhost:8000/escalation-info \
-  -H "Content-Type: application/json" \
-  -d '{
-    "issue_summary": "LLM API returns persistent 504 for production requests",
-    "product_area": "LLM",
-    "observed_error": "504 Gateway Timeout, request_id=req_sample_002",
-    "business_impact": "Production workflow is delayed for multiple enterprise users."
-  }'
-```
-
-### 回答反馈
-
-```bash
-curl -X POST http://localhost:8000/feedback \
-  -H "Content-Type: application/json" \
-  -d '{
-    "workflow": "api-debug",
-    "rating": "useful",
-    "question": "API returned 429",
-    "answer": "Check rate limit, quota, retry policy and request volume.",
-    "comment": "The troubleshooting steps are actionable."
-  }'
-```
-
-## 知识库目录
-
-```text
-knowledge/
-├── cdn/
-├── dns/
-├── https/
-├── video/
-├── kubernetes/
-└── llm/
-```
-
-知识库内容覆盖：
-
-- CDN 502 / 504、cache miss、high TTFB
-- DNS resolution failure
-- TLS certificate issue
-- video first frame slow、HLS playback stutter
-- Kubernetes Pod Pending
-- LLM API 401 / 403 / 429 / 5xx / timeout
-- Prompt optimization
-- RAG retrieval quality
-- Function Calling schema invalid
-
-## 项目结构
-
-```text
-.
-├── main.py
-├── rag_service.py
-├── prompt_manager.py
-├── classifier.py
-├── log_analyzer.py
-├── static/
-│   ├── index.html
-│   ├── app.js
-│   └── style.css
-├── .github/
-│   └── workflows/
-│       ├── ci.yml
-│       └── deploy.yml
-├── scripts/
-│   ├── health_check.sh
-│   └── deploy.sh
-├── knowledge/
-├── docs/
-├── examples/
-├── postman/
-├── eval/
-├── TEST_RESULT.md
-├── Dockerfile
-├── docker-compose.yml
-├── .env.example
-├── requirements.txt
-├── README.md
-└── README_EN.md
-```
+不要将真实 API Key 或 `.env` 文件提交到仓库。建议通过服务器环境变量、本地 `.env` 或 GitHub Actions Secrets 配置敏感信息。
 
 ## CI/CD 流程
 
-项目提供一套轻量级 GitHub Actions 流程，用于基础检查、Docker 镜像构建、服务器部署和健康检查。
+项目提供轻量级 GitHub Actions 流程，用于基础检查、Docker 镜像构建、服务器部署和健康检查。
 
-### CI 流程
+### CI 阶段
 
 触发条件：
 
@@ -354,53 +336,26 @@ knowledge/
 执行内容：
 
 1. Checkout 代码。
-2. 设置 Python 3.11。
-3. 安装 Python 依赖。
-4. 执行 Python 语法检查：`python -m compileall .`
-5. 启动 FastAPI 服务：`uvicorn main:app --host 0.0.0.0 --port 8000`
-6. 调用 `/health` 健康检查。
-7. 构建 Docker 镜像，验证 Dockerfile 可用。
+2. 安装 Python 依赖。
+3. 执行 Python 语法检查。
+4. 启动 FastAPI 服务。
+5. 调用 `/health` 健康检查，失败时输出 `app.log`。
+6. 构建 Docker 镜像。
 
-配置文件：
+### CD 阶段
 
-```text
-.github/workflows/ci.yml
-```
+Deploy workflow 通过 GitHub Actions 手动触发：
 
-### CD 流程
-
-部署流程通过 GitHub Actions 手动触发：
-
-```text
-Actions -> Deploy -> Run workflow
-```
-
-执行内容：
-
-1. 使用 SSH 登录服务器。
-2. 进入服务器上的项目目录。
-3. 执行 `git pull` 拉取最新代码。
-4. 如果 `.env` 不存在，则从 `.env.example` 复制。
-5. 使用 Docker Compose 重新构建并启动服务。
-6. 等待 FastAPI 服务启动，并通过 `http://127.0.0.1:8000/health` 重试验证部署结果。
+1. 通过 SSH 登录服务器。
+2. 进入服务器项目目录。
+3. 执行 `git pull`。
+4. 如 `.env` 不存在，则从 `.env.example` 复制。
+5. 使用 Docker Compose 重新构建和启动服务。
+6. 通过 `/health` 重试验证部署状态。
 
 部署健康检查最多重试 30 次，每次间隔 3 秒。如果服务仍未就绪，Deploy workflow 会输出最近 100 行容器日志并返回失败状态。
 
-配置文件：
-
-```text
-.github/workflows/deploy.yml
-```
-
-### GitHub Secrets 配置
-
-在 GitHub 仓库中进入：
-
-```text
-Settings -> Secrets and variables -> Actions -> New repository secret
-```
-
-需要配置：
+需要配置的 GitHub Secrets：
 
 | Secret | 说明 |
 | --- | --- |
@@ -410,89 +365,85 @@ Settings -> Secrets and variables -> Actions -> New repository secret
 | `SERVER_PORT` | SSH 端口，通常为 `22` |
 | `PROJECT_DIR` | 服务器上的项目目录，例如 `/opt/cloudsupport-ai` |
 
-服务器需要提前安装：
-
-- Git
-- Docker
-- Docker Compose
-
-服务器上的 `PROJECT_DIR` 需要提前 clone 好项目，或者在服务器上先手动完成首次 clone。
-
-### 本地部署脚本
-
-脚本位置：
-
-```text
-scripts/deploy.sh
-scripts/health_check.sh
-```
-
-首次使用时确认脚本有执行权限：
+本地部署脚本：
 
 ```bash
 chmod +x scripts/*.sh
-```
-
-在服务器项目目录执行：
-
-```bash
 ./scripts/deploy.sh
 ```
 
-脚本会自动执行：
-
-- `git pull`
-- `.env` 初始化检查
-- `docker compose up -d --build`
-- `docker compose ps`
-- `/health` 重试健康检查
-
-### 健康检查
-
-默认检查：
+健康检查脚本：
 
 ```bash
 ./scripts/health_check.sh
-```
-
-指定检查地址：
-
-```bash
 HEALTH_URL=http://127.0.0.1:8000/health ./scripts/health_check.sh
-```
-
-调整重试次数和间隔：
-
-```bash
 MAX_RETRIES=30 SLEEP_SECONDS=3 ./scripts/health_check.sh
 ```
 
-### 注意事项
+## 操作演示流程
 
-- 不要把密钥提交到仓库。
-- `.env` 不要提交到仓库。
-- 服务器私钥、服务器地址和项目路径通过 GitHub Actions Secrets 配置。
-- 生产环境应进一步增加权限隔离、镜像版本管理、回滚策略、监控告警和灰度发布能力。
+1. 打开 Web 控制台。
+2. 打开 Swagger 文档。
+3. 查看 `/health` 健康检查。
+4. 演示 API 429 报错分析。
+5. 演示日志 504 分析。
+6. 演示登录 403 工单分诊。
+7. 演示客户回复生成。
+8. 演示知识库问答。
+9. 演示升级信息收集。
+10. 提交 `useful` / `not_useful` 反馈。
+11. 查看 GitHub Actions CI/CD 流程。
 
-## 设计说明
+## 项目截图
 
-- 规则兜底优先保证可演示、可部署和接口稳定。
-- RAG 用于把企业知识库中的排障流程与客户问题关联起来。
-- Prompt 模板用于控制输出格式、回复语气和缺失信息收集。
-- 反馈 JSONL 用于记录回答质量，便于后续改进知识库和规则。
-- Web 控制台面向支持人员操作，Swagger 面向接口调试。
+### Web 控制台首页
 
-## 限制说明
+![Web Console Home](docs/images/web-console-home.png)
 
-CloudSupport AI 是一个技术支持工作流原型。默认不连接真实客户数据、真实工单系统或生产监控系统。部署到实际业务环境前，需要补充认证鉴权、权限控制、审计日志、数据脱敏、监控告警、评测集和持久化存储。
+### API 报错分析
 
-## 后续规划
+![API Debug Result](docs/images/api-debug-result.png)
 
-- 接入真实工单系统和客户支持台。
+### 日志分析
+
+![Log Analyze Result](docs/images/log-analyze-result.png)
+
+### 工单分诊
+
+![Ticket Triage Result](docs/images/ticket-triage-result.png)
+
+### CI 成功记录
+
+![CI Success](docs/images/ci-success.png)
+
+### Deploy 成功记录
+
+![Deploy Success](docs/images/deploy-success.png)
+
+## 操作演示视频
+
+视频文件路径：
+
+```text
+docs/videos/cloudsupport-ai-demo.mp4
+```
+
+待补充。
+
+## 安全说明
+
+- 不要把服务器密码、SSH 私钥、API Key 或 `.env` 文件提交到仓库。
+- GitHub Actions 部署所需信息通过 Secrets 配置。
+- 反馈文件、向量库数据和运行时数据默认写入本地目录，并通过 `.gitignore` 忽略。
+- 接入实际业务前，建议补充认证鉴权、角色权限、审计日志、数据脱敏、访问控制和监控告警。
+
+## 后续优化方向
+
+- 接入企业工单系统和客户支持台。
 - 支持多知识库与多租户隔离。
 - 增加用户登录、角色权限和访问审计。
-- 接入 Prometheus / Grafana 监控。
-- 增加 RAG 回答质量评测集。
+- 增加 RAG 评测集和回答质量评分。
 - 支持反馈驱动的知识库更新流程。
 - 支持对话历史和工单上下文记忆。
-- 增加更完整的 Web 控制台权限与配置页面。
+- 增加知识库管理页面。
+- 增加更完善的日志、指标和告警能力。

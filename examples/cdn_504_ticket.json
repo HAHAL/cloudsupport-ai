@@ -1,6 +1,6 @@
 {
-  "title": "CDN accelerated API returns intermittent 504 in Singapore and Jakarta",
-  "description": "A BytePlus overseas customer reports that https://api.example-global.com/order/query intermittently returns 504 through CDN from Singapore and Jakarta users. Direct origin access is slower than usual but sometimes succeeds. The issue started around 2026-04-28 10:20 UTC+8. Nginx access log shows request_time=60.001 and upstream_response_time=60.000 for several requests. Business impact: checkout query API latency is affecting paid users.",
+  "title": "客户反馈登录系统时报 403",
+  "description": "客户使用企业账号登录后台时提示 Forbidden，影响部分用户访问。问题出现在工作日上午高峰期，客户希望确认是否与账号权限、SSO 配置或访问策略有关。",
   "customer_level": "enterprise",
-  "affected_product": "BytePlus CDN"
+  "affected_product": "SaaS Platform"
 }

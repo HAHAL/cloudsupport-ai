@@ -2,14 +2,14 @@
   {
     "endpoint": "/chat",
     "payload": {
-      "question": "CDN returns intermittent 504, how should we troubleshoot origin timeout and upstream response time?"
+      "question": "企业知识库问答结果不准确，应该如何排查？"
     },
     "expected_focus": [
-      "origin connectivity",
-      "upstream_response_time",
-      "request ID",
-      "timestamp",
-      "direct origin access"
+      "chunk size",
+      "embedding model",
+      "Top-K",
+      "metadata",
+      "knowledge freshness"
     ]
   },
   {
@@ -28,14 +28,14 @@
   {
     "endpoint": "/chat",
     "payload": {
-      "question": "RAG answer is inaccurate. How can we debug retrieval quality?"
+      "question": "应用后台登录接口返回 403，应该收集哪些排查信息？"
     },
     "expected_focus": [
-      "chunk size",
-      "embedding model",
-      "Top-K",
-      "metadata filter",
-      "reranking"
+      "request ID",
+      "user role",
+      "SSO mapping",
+      "permission policy",
+      "timestamp"
     ]
   }
 ]

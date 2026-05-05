@@ -4,15 +4,14 @@
 
 ## 1. 文档上传
 
-知识库文档放在 `knowledge/` 目录下，按产品或场景分类，例如：
+知识库文档放在 `knowledge/` 目录下，按企业支持场景分类，例如：
 
 ```text
-knowledge/cdn/
-knowledge/dns/
-knowledge/https/
-knowledge/video/
-knowledge/kubernetes/
-knowledge/llm/
+knowledge/api/
+knowledge/web-app/
+knowledge/deployment/
+knowledge/ai-support/
+knowledge/support-process/
 ```
 
 支持 Markdown、TXT 和 PDF 等本地文档格式。

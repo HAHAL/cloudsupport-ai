@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "CloudSupport AI",
-    "description": "Postman collection for CloudSupport AI FastAPI backend. Scenarios cover cloud computing and LLM technical support workflows.",
+    "description": "Postman collection for CloudSupport AI FastAPI backend. Scenarios cover enterprise support, SaaS support, AI application support, API troubleshooting, log analysis, ticket triage, and knowledge base Q&A workflows.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -41,7 +41,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"question\": \"A BytePlus CDN customer reports high TTFB and frequent cache MISS for static JavaScript files in Southeast Asia. How should we troubleshoot?\"\n}"
+          "raw": "{\n  \"question\": \"企业知识库问答结果不准确，应该如何排查？\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/chat",
@@ -56,7 +56,7 @@
       }
     },
     {
-      "name": "Ticket Triage - CDN 504 Overseas Customer",
+      "name": "Ticket Triage - Login 403",
       "request": {
         "method": "POST",
         "header": [
@@ -67,7 +67,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"title\": \"CDN accelerated API returns intermittent 504 in Singapore and Jakarta\",\n  \"description\": \"A BytePlus overseas customer reports that https://api.example-global.com/order/query intermittently returns 504 through CDN from Singapore and Jakarta users. Direct origin access is slower than usual but sometimes succeeds. The issue started around 2026-04-28 10:20 UTC+8. Nginx access log shows request_time=60.001 and upstream_response_time=60.000 for several requests. Business impact: checkout query API latency is affecting paid users.\",\n  \"customer_level\": \"enterprise\",\n  \"affected_product\": \"BytePlus CDN\"\n}"
+          "raw": "{\n  \"title\": \"客户反馈登录系统时报 403\",\n  \"description\": \"客户使用企业账号登录后台时提示 Forbidden，影响部分用户访问。问题出现在工作日上午高峰期，客户希望确认是否与账号权限、SSO 配置或访问策略有关。\",\n  \"customer_level\": \"enterprise\",\n  \"affected_product\": \"SaaS Platform\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/ticket-triage",
@@ -78,7 +78,7 @@
             "ticket-triage"
           ]
         },
-        "description": "Classify and route an overseas CDN 504 support ticket."
+        "description": "Classify and route a SaaS platform login failure support ticket."
       }
     },
     {
@@ -93,7 +93,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"method\": \"POST\",\n  \"url\": \"https://ark.ap-southeast.byteplusapi.com/api/v3/chat/completions\",\n  \"status_code\": 401,\n  \"error_message\": \"Unauthorized: invalid api key or token is expired\",\n  \"request_id\": \"req_byteplus_llm_401_20260428_001\",\n  \"response_body\": \"{\\\"error\\\":{\\\"code\\\":\\\"Unauthorized\\\",\\\"message\\\":\\\"The API key is invalid or does not have access to this model.\\\"}}\"\n}"
+          "raw": "{\n  \"method\": \"POST\",\n  \"url\": \"https://api.example.com/v1/chat/completions\",\n  \"status_code\": 401,\n  \"error_message\": \"Unauthorized: invalid api key or token is expired\",\n  \"request_id\": \"req_llm_401_sample_001\",\n  \"response_body\": \"{\\\"error\\\":{\\\"code\\\":\\\"Unauthorized\\\",\\\"message\\\":\\\"The API key is invalid or does not have access to this model.\\\"}}\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api-debug",
@@ -119,7 +119,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"method\": \"POST\",\n  \"url\": \"https://ark.ap-southeast.byteplusapi.com/api/v3/chat/completions\",\n  \"status_code\": 429,\n  \"error_message\": \"Rate limit exceeded for model endpoint. Please retry later.\",\n  \"request_id\": \"req_byteplus_llm_429_20260428_002\",\n  \"response_body\": \"{\\\"error\\\":{\\\"code\\\":\\\"TooManyRequests\\\",\\\"message\\\":\\\"RPM/TPM quota exceeded for current workspace.\\\"}}\"\n}"
+          "raw": "{\n  \"method\": \"POST\",\n  \"url\": \"https://api.example.com/v1/chat/completions\",\n  \"status_code\": 429,\n  \"error_message\": \"Rate limit exceeded for model endpoint. Please retry later.\",\n  \"request_id\": \"req_llm_429_sample_002\",\n  \"response_body\": \"{\\\"error\\\":{\\\"code\\\":\\\"TooManyRequests\\\",\\\"message\\\":\\\"RPM/TPM quota exceeded for current workspace.\\\"}}\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/api-debug",
@@ -134,7 +134,7 @@
       }
     },
     {
-      "name": "Log Analyze - Video First Frame Slow",
+      "name": "Log Analyze - API 504 Timeout",
       "request": {
         "method": "POST",
         "header": [
@@ -145,7 +145,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"log_text\": \"2026-04-28T11:42:17+08:00 user_region=Thailand isp=AIS device=iPhone player_sdk=BytePlusPlayer/1.8.2 url=https://vod.example.com/live/stream.m3u8 status=200 dns_time=120ms tcp_time=180ms tls_time=260ms ttfb=2800ms first_segment=https://vod.example.com/live/seg-102938.ts segment_status=200 segment_size=4.8MB segment_download_time=4200ms cache_status=MISS first_frame_time=7800ms error=first_frame_slow\",\n  \"question\": \"Analyze why BytePlus VOD/HLS playback first frame is slow for overseas users.\"\n}"
+          "raw": "{\n  \"log_text\": \"status=504 request_time=60.001 upstream_response_time=60.000 error=\\\"upstream timed out\\\" request_id=req_504_demo\",\n  \"question\": \"为什么接口返回 504？\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/log-analyze",
@@ -156,11 +156,11 @@
             "log-analyze"
           ]
         },
-        "description": "Analyze playback logs for first-frame latency."
+        "description": "Analyze application gateway logs for API timeout."
       }
     },
     {
-      "name": "Ticket Reply - English Function Calling Issue",
+      "name": "Ticket Reply - Login 403",
       "request": {
         "method": "POST",
         "header": [
@@ -171,7 +171,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"ticket_title\": \"LLM Function Calling schema validation failed during integration testing\",\n  \"ticket_description\": \"The overseas customer is integrating BytePlus LLM Function Calling for an e-commerce customer-service bot. Since yesterday, some requests return tool arguments that fail JSON schema validation. The invalid output usually misses required fields: order_id and action_type. The customer needs an English reply with next troubleshooting steps.\",\n  \"analysis_context\": \"Likely related to complex nested schema, unclear field descriptions, and missing server-side schema validation retry. No request_id has been provided yet. Need model name, SDK version, raw tool call response, schema definition, and failed validation error.\",\n  \"customer_name\": \"Customer\"\n}"
+          "raw": "{\n  \"ticket_title\": \"客户反馈登录系统时报 403\",\n  \"ticket_description\": \"客户使用企业账号登录后台时提示 Forbidden，影响部分用户访问。客户希望获得初步排查建议和下一步需要补充的信息。\",\n  \"analysis_context\": \"可能与账号权限、组织角色、SSO 映射或访问策略有关。需要 request_id、时间点、账号类型、登录方式和复现步骤。\",\n  \"customer_name\": \"Customer\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/ticket-reply",
@@ -182,11 +182,11 @@
             "ticket-reply"
           ]
         },
-        "description": "Generate a professional support reply for an overseas LLM Function Calling ticket."
+        "description": "Generate a professional support reply for a SaaS platform login failure ticket."
       }
     },
     {
-      "name": "Escalation Info - LLM Streaming 5xx",
+      "name": "Escalation Info - Login 403",
       "request": {
         "method": "POST",
         "header": [
@@ -197,7 +197,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"issue_summary\": \"LLM API returns intermittent 5xx for streaming requests\",\n  \"product_area\": \"LLM\",\n  \"observed_error\": \"status=502, stream interrupted\",\n  \"business_impact\": \"Affects a customer service chatbot integration test\"\n}"
+          "raw": "{\n  \"issue_summary\": \"SaaS 后台登录接口持续返回 403\",\n  \"product_area\": \"SaaS Platform\",\n  \"observed_error\": \"403 Forbidden, request_id=req_login_403_sample\",\n  \"business_impact\": \"部分企业用户无法访问后台管理页面。\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/escalation-info",
