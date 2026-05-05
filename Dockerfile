@@ -29,7 +29,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . .
 
-RUN mkdir -p /app/knowledge /app/chroma_data
+RUN mkdir -p /app/knowledge /app/chroma_data /app/data
 
 EXPOSE 8000
 

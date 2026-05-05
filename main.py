@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from functools import lru_cache
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,7 @@ from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from classifier import QuestionClassifier
@@ -20,7 +22,9 @@ app = FastAPI(
     version="0.1.0",
 )
 
-FEEDBACK_FILE = Path("feedback/answer_feedback.jsonl")
+FEEDBACK_FILE = Path(os.getenv("FEEDBACK_FILE", "feedback/answer_feedback.jsonl"))
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 class ChatRequest(BaseModel):
@@ -250,7 +254,7 @@ def get_rag_service() -> RAGService:
 
 @app.get("/", include_in_schema=False)
 def web_console() -> FileResponse:
-    return FileResponse("index.html")
+    return FileResponse("static/index.html")
 
 
 @app.get("/health", response_model=HealthResponse)

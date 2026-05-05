@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CloudSupport AI Console</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside>
+        <h1>CloudSupport AI</h1>
+        <p>企业知识库 AI 技术支持助手，用于工单分诊、知识库问答、API 报错分析、日志分析、客户回复和升级信息收集。</p>
+        <div class="nav" id="nav"></div>
+      </aside>
+
+      <main>
+        <div class="topbar">
+          <h2 id="workflowTitle">知识库问答</h2>
+          <a href="/docs" target="_blank" rel="noreferrer">Swagger /docs</a>
+        </div>
+
+        <section class="workspace">
+          <form class="panel input-panel" id="workflowForm">
+            <div id="fields"></div>
+            <button class="primary" id="submitButton" type="submit">执行分析</button>
+            <p class="hint">默认使用规则兜底逻辑，未配置外部模型 Key 也可以完成主要流程演示。</p>
+          </form>
+
+          <section class="panel result-panel">
+            <div id="result" class="result-content"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

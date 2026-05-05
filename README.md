@@ -163,6 +163,12 @@ docker compose ps
 docker compose logs -f
 ```
 
+健康检查：
+
+```bash
+curl -f http://127.0.0.1:8000/health
+```
+
 停止服务：
 
 ```bash
@@ -309,7 +315,17 @@ knowledge/
 ├── prompt_manager.py
 ├── classifier.py
 ├── log_analyzer.py
-├── index.html
+├── static/
+│   ├── index.html
+│   ├── app.js
+│   └── style.css
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── deploy.yml
+├── scripts/
+│   ├── health_check.sh
+│   └── deploy.sh
 ├── knowledge/
 ├── docs/
 ├── examples/
@@ -318,10 +334,137 @@ knowledge/
 ├── TEST_RESULT.md
 ├── Dockerfile
 ├── docker-compose.yml
+├── .env.example
 ├── requirements.txt
 ├── README.md
 └── README_EN.md
 ```
+
+## CI/CD 流程
+
+项目提供一套轻量级 GitHub Actions 流程，用于基础检查、Docker 镜像构建、服务器部署和健康检查。
+
+### CI 流程
+
+触发条件：
+
+- push 到 `main`
+- pull_request 到 `main`
+
+执行内容：
+
+1. Checkout 代码。
+2. 设置 Python 3.11。
+3. 安装 Python 依赖。
+4. 执行 Python 语法检查：`python -m compileall .`
+5. 启动 FastAPI 服务：`uvicorn main:app --host 0.0.0.0 --port 8000`
+6. 调用 `/health` 健康检查。
+7. 构建 Docker 镜像，验证 Dockerfile 可用。
+
+配置文件：
+
+```text
+.github/workflows/ci.yml
+```
+
+### CD 流程
+
+部署流程通过 GitHub Actions 手动触发：
+
+```text
+Actions -> Deploy -> Run workflow
+```
+
+执行内容：
+
+1. 使用 SSH 登录服务器。
+2. 进入服务器上的项目目录。
+3. 执行 `git pull` 拉取最新代码。
+4. 如果 `.env` 不存在，则从 `.env.example` 复制。
+5. 使用 Docker Compose 重新构建并启动服务。
+6. 调用 `http://127.0.0.1:8000/health` 验证部署结果。
+
+配置文件：
+
+```text
+.github/workflows/deploy.yml
+```
+
+### GitHub Secrets 配置
+
+在 GitHub 仓库中进入：
+
+```text
+Settings -> Secrets and variables -> Actions -> New repository secret
+```
+
+需要配置：
+
+| Secret | 说明 |
+| --- | --- |
+| `SERVER_HOST` | 服务器 IP 或域名 |
+| `SERVER_USER` | SSH 登录用户名 |
+| `SERVER_SSH_KEY` | 用于登录服务器的 SSH 私钥内容 |
+| `SERVER_PORT` | SSH 端口，通常为 `22` |
+| `PROJECT_DIR` | 服务器上的项目目录，例如 `/opt/cloudsupport-ai` |
+
+服务器需要提前安装：
+
+- Git
+- Docker
+- Docker Compose
+
+服务器上的 `PROJECT_DIR` 需要提前 clone 好项目，或者在服务器上先手动完成首次 clone。
+
+### 本地部署脚本
+
+脚本位置：
+
+```text
+scripts/deploy.sh
+scripts/health_check.sh
+```
+
+首次使用时确认脚本有执行权限：
+
+```bash
+chmod +x scripts/*.sh
+```
+
+在服务器项目目录执行：
+
+```bash
+./scripts/deploy.sh
+```
+
+脚本会自动执行：
+
+- `git pull`
+- `.env` 初始化检查
+- `docker compose up -d --build`
+- `docker compose ps`
+- `/health` 健康检查
+
+### 健康检查
+
+默认检查：
+
+```bash
+./scripts/health_check.sh
+```
+
+指定检查地址：
+
+```bash
+HEALTH_URL=http://127.0.0.1:8000/health ./scripts/health_check.sh
+```
+
+### 注意事项
+
+- 不要把密钥提交到仓库。
+- `.env` 不要提交到仓库。
+- 服务器私钥、服务器地址和项目路径通过 GitHub Actions Secrets 配置。
+- 生产环境应进一步增加权限隔离、镜像版本管理、回滚策略、监控告警和灰度发布能力。
 
 ## 设计说明
 
