@@ -23,4 +23,15 @@ jobs:
             docker compose down
             docker compose up -d --build
             docker compose ps
-            curl -f http://127.0.0.1:8000/health
+            for i in {1..30}; do
+              if curl -fsS http://127.0.0.1:8000/health; then
+                echo "Health check passed."
+                exit 0
+              fi
+              echo "Health check failed, retrying in 3 seconds... ($i/30)"
+              sleep 3
+            done
+
+            echo "Health check failed after retries. Showing logs:"
+            docker compose logs --tail=100
+            exit 1

@@ -382,7 +382,9 @@ Actions -> Deploy -> Run workflow
 3. 执行 `git pull` 拉取最新代码。
 4. 如果 `.env` 不存在，则从 `.env.example` 复制。
 5. 使用 Docker Compose 重新构建并启动服务。
-6. 调用 `http://127.0.0.1:8000/health` 验证部署结果。
+6. 等待 FastAPI 服务启动，并通过 `http://127.0.0.1:8000/health` 重试验证部署结果。
+
+部署健康检查最多重试 30 次，每次间隔 3 秒。如果服务仍未就绪，Deploy workflow 会输出最近 100 行容器日志并返回失败状态。
 
 配置文件：
 
@@ -443,7 +445,7 @@ chmod +x scripts/*.sh
 - `.env` 初始化检查
 - `docker compose up -d --build`
 - `docker compose ps`
-- `/health` 健康检查
+- `/health` 重试健康检查
 
 ### 健康检查
 
@@ -457,6 +459,12 @@ chmod +x scripts/*.sh
 
 ```bash
 HEALTH_URL=http://127.0.0.1:8000/health ./scripts/health_check.sh
+```
+
+调整重试次数和间隔：
+
+```bash
+MAX_RETRIES=30 SLEEP_SECONDS=3 ./scripts/health_check.sh
 ```
 
 ### 注意事项

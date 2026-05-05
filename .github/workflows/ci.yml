@@ -9,6 +9,8 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout repository
@@ -21,6 +23,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          if [ ! -f .env ]; then cp .env.example .env; fi
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
@@ -31,11 +34,22 @@ jobs:
       - name: Start application
         run: |
           uvicorn main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
-          sleep 5
+          echo $! > app.pid
 
       - name: Health check
         run: |
-          curl -f http://127.0.0.1:8000/health
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8000/health; then
+              echo "Health check passed."
+              exit 0
+            fi
+            echo "Health check failed, retrying in 3 seconds... ($i/30)"
+            sleep 3
+          done
+
+          echo "Health check failed after retries. Showing app.log:"
+          cat app.log
+          exit 1
 
       - name: Build Docker image
         run: |
