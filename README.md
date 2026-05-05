@@ -440,7 +440,7 @@ CHROMA_COLLECTION=cloudsupport_kb
 1. Checkout 代码。
 2. 安装 Python 依赖。
 3. 执行 Python 语法检查。
-4. 运行最小接口测试 `pytest -q`。
+4. 运行最小接口测试 `PYTHONPATH=. pytest -q`。
 5. 启动 FastAPI 服务。
 6. 调用 `/health` 健康检查，失败时输出 `app.log`。
 7. 构建 Docker 镜像。
