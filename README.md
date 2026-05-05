@@ -506,14 +506,29 @@ MAX_RETRIES=30 SLEEP_SECONDS=3 ./scripts/health_check.sh
 
 ## 项目截图
 
-当前已提供：
+### Web 控制台首页
 
-- Web 控制台首页：`docs/images/web-console-home.png`
-- API 报错分析结果：`docs/images/api-debug-result.png`
-- 日志分析结果：`docs/images/log-analyze-result.png`
-- 工单分诊结果：`docs/images/ticket-triage-result.png`
-- CI Success：`docs/images/ci-success.png`
-- Deploy Success：`docs/images/deploy-success.png`
+![Web 控制台首页](docs/images/web-console-home.png)
+
+### API 报错分析结果
+
+![API 报错分析结果](docs/images/api-debug-result.png)
+
+### 日志分析结果
+
+![日志分析结果](docs/images/log-analyze-result.png)
+
+### 工单分诊结果
+
+![工单分诊结果](docs/images/ticket-triage-result.png)
+
+### CI Success
+
+![CI Success](docs/images/ci-success.png)
+
+### Deploy Success
+
+![Deploy Success](docs/images/deploy-success.png)
 
 可继续补充：
 
