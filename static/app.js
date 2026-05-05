@@ -80,7 +80,7 @@ const workflows = {
   },
   escalation: {
     label: "升级信息收集",
-    endpoint: "/escalation-info",
+    endpoint: "/escalation-summary",
     fields: [
       { name: "issue_summary", label: "问题摘要", value: "LLM API returns persistent 504 for production requests" },
       { name: "product_area", label: "产品区域", value: "LLM" },

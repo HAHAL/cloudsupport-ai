@@ -121,14 +121,14 @@ curl -f http://127.0.0.1:8000/health
 ## API Endpoints
 
 | API | Method | Purpose |
-| --- | --- | --- |
+|---|---|---|
 | `/health` | GET | Service health check |
 | `/chat` | POST | Enterprise knowledge base Q&A |
 | `/ticket-triage` | POST | Ticket classification and routing |
 | `/api-debug` | POST | API error troubleshooting |
 | `/log-analyze` | POST | HTTP, gateway, and application log analysis |
 | `/ticket-reply` | POST | Customer reply draft generation |
-| `/escalation-info` | POST | Escalation information collection |
+| `/escalation-summary` | POST | Escalation information collection |
 | `/feedback` | POST | Answer feedback tracking |
 | `/knowledge/status` | GET | View knowledge base status |
 | `/knowledge/versions` | GET | View document versions |
@@ -137,6 +137,8 @@ curl -f http://127.0.0.1:8000/health
 | `/knowledge/preview-chunks` | POST | Preview document chunks |
 | `/knowledge/deprecate` | POST | Mark a document version as deprecated |
 | `/docs` | GET | Swagger API documentation |
+
+Compatibility endpoint: `POST /escalation-info` is still available for older clients. New integrations should use `/escalation-summary`.
 
 ## API Examples
 
@@ -330,6 +332,7 @@ CI runs on push and pull request events targeting `main`:
 - Checkout repository
 - Install Python dependencies
 - Run Python syntax checks
+- Run minimal API tests with `pytest -q`
 - Start the FastAPI service
 - Call `/health`
 - Build the Docker image

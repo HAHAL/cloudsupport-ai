@@ -185,8 +185,8 @@
         "description": "Generate a professional support reply for a SaaS platform login failure ticket."
       }
     },
-    {
-      "name": "Escalation Info - Login 403",
+        {
+            "name": "Escalation Summary - Login 403",
       "request": {
         "method": "POST",
         "header": [
@@ -200,12 +200,12 @@
           "raw": "{\n  \"issue_summary\": \"SaaS 后台登录接口持续返回 403\",\n  \"product_area\": \"SaaS Platform\",\n  \"observed_error\": \"403 Forbidden, request_id=req_login_403_sample\",\n  \"business_impact\": \"部分企业用户无法访问后台管理页面。\"\n}"
         },
         "url": {
-          "raw": "{{base_url}}/escalation-info",
+          "raw": "{{base_url}}/escalation-summary",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "escalation-info"
+            "escalation-summary"
           ]
         },
         "description": "Collect required information before escalating a technical support issue."

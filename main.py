@@ -524,8 +524,8 @@ def ticket_reply(payload: TicketReplyRequest) -> TicketReplyResponse:
     )
 
 
-@app.post("/escalation-info", response_model=EscalationInfoResponse)
-def escalation_info(payload: EscalationInfoRequest) -> EscalationInfoResponse:
+@app.post("/escalation-summary", response_model=EscalationInfoResponse)
+def escalation_summary(payload: EscalationInfoRequest) -> EscalationInfoResponse:
     """Collect information required before escalating a support issue."""
     text = "\n".join(
         item
@@ -548,6 +548,12 @@ def escalation_info(payload: EscalationInfoRequest) -> EscalationInfoResponse:
         escalation_criteria=_escalation_criteria(category, status_codes),
         confidence=0.78 if payload.observed_error or status_codes else 0.58,
     )
+
+
+@app.post("/escalation-info", response_model=EscalationInfoResponse)
+def escalation_info(payload: EscalationInfoRequest) -> EscalationInfoResponse:
+    """Compatibility endpoint for escalation summary generation."""
+    return escalation_summary(payload)
 
 
 @app.post("/feedback", response_model=FeedbackResponse)
