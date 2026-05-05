@@ -52,7 +52,7 @@
             "chat"
           ]
         },
-        "description": "Ask a RAG-based technical support question. Requires API key and knowledge base for full LLM answer."
+        "description": "Ask a knowledge-base support question. Rule fallback works by default; configured model providers enable fuller RAG answers."
       }
     },
     {
@@ -209,6 +209,32 @@
           ]
         },
         "description": "Collect required information before escalating a technical support issue."
+      }
+    },
+    {
+      "name": "Feedback - Mark Answer Useful",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"workflow\": \"api-debug\",\n  \"rating\": \"useful\",\n  \"question\": \"API returned 429 for chat/completions\",\n  \"answer\": \"Check rate limit, quota, retry policy and request volume.\",\n  \"comment\": \"The troubleshooting steps are actionable.\",\n  \"source\": \"postman\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/feedback",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "feedback"
+          ]
+        },
+        "description": "Save answer quality feedback to the local JSONL feedback file."
       }
     }
   ]

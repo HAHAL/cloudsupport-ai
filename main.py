@@ -1,8 +1,13 @@
+from datetime import datetime, timezone
 from functools import lru_cache
+import json
 import re
+from pathlib import Path
 from typing import Any
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from classifier import QuestionClassifier
@@ -11,9 +16,11 @@ from rag_service import RAGService
 
 app = FastAPI(
     title="CloudSupport AI",
-    description="FastAPI backend for technical support RAG assistant.",
+    description="Enterprise knowledge base AI technical support assistant.",
     version="0.1.0",
 )
+
+FEEDBACK_FILE = Path("feedback/answer_feedback.jsonl")
 
 
 class ChatRequest(BaseModel):
@@ -149,6 +156,22 @@ class EscalationInfoResponse(BaseModel):
     confidence: float
 
 
+class FeedbackRequest(BaseModel):
+    workflow: str = Field(..., min_length=2, description="Workflow name, such as chat/api-debug/log-analyze")
+    rating: Literal["useful", "not_useful"] = Field(..., description="Feedback label")
+    question: str | None = Field(None, description="Original user question or ticket summary")
+    answer: str | None = Field(None, description="Answer or response draft to be reviewed")
+    comment: str | None = Field(None, description="Optional feedback comment")
+    source: str | None = Field("web-console", description="Feedback source")
+
+
+class FeedbackResponse(BaseModel):
+    status: str
+    saved: bool
+    feedback_file: str
+    received_at: str
+
+
 STATUS_CODE_KNOWLEDGE: dict[int, dict[str, Any]] = {
     400: {
         "type": "bad_request",
@@ -221,8 +244,13 @@ STATUS_CODE_KNOWLEDGE: dict[int, dict[str, Any]] = {
 
 @lru_cache(maxsize=1)
 def get_rag_service() -> RAGService:
-    """Create the RAG service once and reuse Chroma/LLM clients."""
+    """Create the RAG service once and reuse retrieval or model clients."""
     return RAGService()
+
+
+@app.get("/", include_in_schema=False)
+def web_console() -> FileResponse:
+    return FileResponse("index.html")
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -232,12 +260,28 @@ def health() -> HealthResponse:
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest) -> ChatResponse:
-    """Answer a technical support question through the RAG pipeline."""
+    """Answer an enterprise support question through RAG or deterministic fallback."""
     try:
         result = get_rag_service().answer(payload.question)
         return ChatResponse(**result)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception:
+        category = _infer_support_category(payload.question)
+        status_codes = _extract_status_codes(payload.question)
+        actions = _next_actions_for_category(category, status_codes)
+        missing_info = _missing_info_for_support(payload.question, category)
+        answer = _build_fallback_chat_answer(category, status_codes, actions, missing_info)
+        return ChatResponse(
+            question=payload.question,
+            category=category,
+            answer=answer,
+            retrieved_contents=[],
+            references=[],
+            metadata={
+                "mode": "rule_based_fallback",
+                "has_context": False,
+                "reason": "RAG provider is not configured or temporarily unavailable",
+            },
+        )
 
 
 @app.post("/ticket-triage", response_model=TicketTriageResponse)
@@ -404,6 +448,35 @@ def escalation_info(payload: EscalationInfoRequest) -> EscalationInfoResponse:
         suggested_summary=_build_escalation_summary(payload, category, status_codes),
         escalation_criteria=_escalation_criteria(category, status_codes),
         confidence=0.78 if payload.observed_error or status_codes else 0.58,
+    )
+
+
+@app.post("/feedback", response_model=FeedbackResponse)
+def submit_feedback(payload: FeedbackRequest) -> FeedbackResponse:
+    """Save answer feedback locally for knowledge base and prompt improvement."""
+    received_at = datetime.now(timezone.utc).isoformat()
+    record = {
+        "received_at": received_at,
+        "workflow": payload.workflow,
+        "rating": payload.rating,
+        "question": payload.question,
+        "answer": payload.answer,
+        "comment": payload.comment,
+        "source": payload.source,
+    }
+
+    try:
+        FEEDBACK_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with FEEDBACK_FILE.open("a", encoding="utf-8") as file:
+            file.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to save feedback: {exc}") from exc
+
+    return FeedbackResponse(
+        status="ok",
+        saved=True,
+        feedback_file=str(FEEDBACK_FILE),
+        received_at=received_at,
     )
 
 
@@ -757,3 +830,26 @@ def _severity_from_status(status_code: int | None) -> str:
     if status_code and status_code >= 400:
         return "low"
     return "unknown"
+
+
+def _build_fallback_chat_answer(
+    category: str,
+    status_codes: list[int],
+    actions: list[str],
+    missing_info: list[str],
+) -> str:
+    status_text = ", ".join(str(code) for code in status_codes) if status_codes else "not detected"
+    return "\n".join(
+        [
+            f"问题类型初步判断：{category}",
+            f"检测到的状态码：{status_text}",
+            "",
+            "初步排查建议：",
+            *[f"{index}. {action}" for index, action in enumerate(actions, start=1)],
+            "",
+            "建议补充信息：",
+            *[f"{index}. {item}" for index, item in enumerate(missing_info, start=1)],
+            "",
+            "说明：当前回答由规则兜底生成。配置 LLM 与 Embedding API Key 后，/chat 可启用更完整的知识库检索与模型回答。",
+        ]
+    )

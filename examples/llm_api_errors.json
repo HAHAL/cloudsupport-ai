@@ -7,7 +7,7 @@
       "url": "https://api.example.com/v1/chat/completions",
       "status_code": 401,
       "error_message": "Unauthorized: invalid API key",
-      "request_id": "req_llm_401_demo",
+      "request_id": "req_llm_401_sample",
       "response_body": "{\"error\":{\"code\":\"Unauthorized\",\"message\":\"Invalid API key or token expired.\"}}"
     }
   },
@@ -19,7 +19,7 @@
       "url": "https://api.example.com/v1/chat/completions",
       "status_code": 429,
       "error_message": "Rate limit exceeded",
-      "request_id": "req_llm_429_demo",
+      "request_id": "req_llm_429_sample",
       "response_body": "{\"error\":{\"code\":\"TooManyRequests\",\"message\":\"RPM or TPM quota exceeded.\"}}"
     }
   },
@@ -31,7 +31,7 @@
       "url": "https://api.example.com/v1/chat/completions",
       "status_code": 504,
       "error_message": "Gateway timeout while waiting for model response",
-      "request_id": "req_llm_504_demo",
+      "request_id": "req_llm_504_sample",
       "response_body": "{\"error\":{\"code\":\"GatewayTimeout\",\"message\":\"Model inference exceeded gateway timeout.\"}}"
     }
   },
@@ -43,7 +43,7 @@
       "url": "https://api.example.com/v1/chat/completions",
       "status_code": 502,
       "error_message": "stream interrupted by upstream connection reset",
-      "request_id": "req_llm_stream_demo",
+      "request_id": "req_llm_stream_sample",
       "response_body": "{\"error\":{\"code\":\"StreamInterrupted\",\"message\":\"Streaming response was interrupted.\"}}"
     }
   }

@@ -1,43 +1,41 @@
-# CloudSupport AI
+# CloudSupport AI: Enterprise Knowledge Base AI Support Assistant
 
-AI Support Workflow Prototype for Cloud and LLM Technical Support
+CloudSupport AI is a lightweight AI-assisted support assistant for enterprise technical support, SaaS product support, AI application support, knowledge base Q&A, API error analysis, log analysis, ticket triage, customer reply drafting, escalation information collection, and answer feedback tracking.
 
-CloudSupport AI is a lightweight AI-assisted support workflow prototype for cloud products and LLM API support scenarios. It helps transform repeated support patterns into structured diagnosis, triage, reply generation, and escalation workflows.
+The project can run without an external LLM API key. Rule-based fallback workflows are available by default. When OpenAI, Qwen, or another OpenAI-compatible provider is configured, the `/chat` endpoint can use a fuller RAG workflow.
 
 ## Overview
 
-CloudSupport AI validates AI-assisted technical support workflows such as knowledge base retrieval, ticket triage, API error analysis, HTTP log analysis, customer reply generation, and escalation information collection.
-
-The backend provides RESTful APIs with stable structured JSON responses. Rule-based workflows can run locally without an LLM API key. The `/chat` endpoint demonstrates a RAG-style workflow using Markdown documents, embeddings, Chroma retrieval, prompt construction, and an external LLM provider.
-
-## Background
-
-Support workflows often include repeated questions, fragmented knowledge, manual ticket classification, unclear API errors, and inconsistent reply quality. This project models those patterns as reusable API workflows that can be tested with curl, Postman, or a simple frontend.
+CloudSupport AI helps support engineers understand customer issues faster and convert repeated support patterns into structured, reusable workflows. It provides both a Web Console and Swagger API documentation for visual operation and API debugging.
 
 ## Key Features
 
 1. Knowledge Base Q&A
 2. Ticket Triage
 3. API Error Analysis
-4. HTTP Log Analysis
-5. Customer Reply Generation
+4. HTTP and Application Log Analysis
+5. Customer Reply Drafting
 6. Escalation Information Collection
-7. RAG-style Retrieval
-8. Dockerized Deployment
+7. Answer Feedback Tracking
+8. Static Web Console
+9. Dockerized Deployment
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    Client["Client / Postman / API Caller"] --> API["FastAPI Service"]
-    API --> Rule["Prompt / Rule Engine"]
-    API --> RAG["RAG-style Retrieval"]
-    Rule --> Response["Structured Support Response"]
-    RAG --> KB["Markdown Knowledge Base"]
-    RAG --> VectorDB["Chroma Vector Store"]
-    RAG --> LLM["LLM Provider"]
-    KB --> VectorDB
-    LLM --> Response
+```text
+User / Support Engineer
+        ↓
+Web Console / Swagger Docs
+        ↓
+FastAPI REST API
+        ↓
+Support Workflow Services
+        ↓
+Rule Engine + RAG Service + Prompt Templates
+        ↓
+Markdown Knowledge Base / Feedback JSONL
+        ↓
+Structured Diagnosis / Reply Draft / Escalation Summary
 ```
 
 ## Tech Stack
@@ -48,31 +46,11 @@ flowchart LR
 - Markdown Knowledge Base
 - LangChain
 - Chroma
-- Embedding
-- Docker
+- Prompt Templates
+- Rule-based Fallback
+- HTML / CSS / JavaScript Web Console
+- Docker Compose
 - Postman
-- RESTful API
-- LLM API / Mockable LLM Provider
-
-## Project Structure
-
-```text
-.
-├── main.py
-├── rag_service.py
-├── prompt_manager.py
-├── classifier.py
-├── log_analyzer.py
-├── knowledge/
-├── examples/
-├── postman/
-├── eval/
-├── TEST_RESULT.md
-├── Dockerfile
-├── docker-compose.yml
-├── README.md
-└── README_EN.md
-```
 
 ## Quick Start
 
@@ -82,7 +60,14 @@ cd cloudsupport-ai
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Open:
+
+```text
+Web Console: http://localhost:8000/
+Swagger:     http://localhost:8000/docs
 ```
 
 Docker:
@@ -91,65 +76,61 @@ Docker:
 docker compose up --build -d
 ```
 
-Swagger:
-
-```text
-http://localhost:8000/docs
-```
-
-## API Documentation
+## API Endpoints
 
 | API | Method | Purpose |
 | --- | --- | --- |
 | `/health` | GET | Service health check |
-| `/docs` | GET | OpenAPI documentation |
-| `/chat` | POST | RAG-based support Q&A |
-| `/ticket-triage` | POST | Ticket classification and triage |
+| `/chat` | POST | Knowledge base Q&A |
+| `/ticket-triage` | POST | Ticket classification and routing |
 | `/api-debug` | POST | API error troubleshooting |
-| `/log-analyze` | POST | HTTP log analysis |
-| `/ticket-reply` | POST | Customer reply generation |
+| `/log-analyze` | POST | HTTP and application log analysis |
+| `/ticket-reply` | POST | Customer reply draft generation |
 | `/escalation-info` | POST | Escalation information collection |
+| `/feedback` | POST | Answer feedback tracking |
+| `/docs` | GET | Swagger API documentation |
+
+## Environment Variables
+
+Rule-based workflows do not require external credentials. Full RAG behavior can be enabled with a configured model provider:
+
+```env
+LLM_PROVIDER=openai
+EMBEDDING_PROVIDER=openai
+OPENAI_API_KEY=your_openai_key
+
+# Or Qwen / DashScope OpenAI-compatible endpoint
+# LLM_PROVIDER=qwen
+# EMBEDDING_PROVIDER=qwen
+# DASHSCOPE_API_KEY=your_dashscope_key
+```
+
+Never commit real API keys to the repository.
 
 ## Knowledge Base
 
-The knowledge base covers CDN, DNS, HTTPS, HTTP status codes, video streaming, Kubernetes, LLM API errors, rate limit, timeout, authentication errors, RAG retrieval quality, and Function Calling schema issues.
+The Markdown knowledge base covers CDN, DNS, HTTPS, video streaming, Kubernetes, LLM API errors, rate limit, timeout, authentication failures, RAG retrieval quality, prompt optimization, and Function Calling schema issues.
 
-## Postman Usage
+## Feedback
 
-Import:
-
-```text
-postman/CloudSupport-AI.postman_collection.json
-```
-
-Default variable:
+The `/feedback` endpoint stores `useful` and `not_useful` labels in local JSONL format:
 
 ```text
-base_url = http://localhost:8000
+feedback/answer_feedback.jsonl
 ```
 
-## Test Result
-
-See [TEST_RESULT.md](TEST_RESULT.md).
-
-## Design Notes
-
-1. Rule-based logic is combined with LLM output for stable first-response behavior.
-2. Support responses are structured for consistent downstream display and review.
-3. Escalation information is collected explicitly to reduce repeated communication.
-4. Markdown knowledge base files are used for lightweight RAG-style retrieval.
-5. The workflow can be extended to internal ticket systems through API integration.
+This file is ignored by Git and can be used to improve rules, prompts, and knowledge base content.
 
 ## Limitations
 
-This project is a prototype for technical support workflow validation. It does not connect to real customer data or production ticket systems by default.
+CloudSupport AI is a technical support workflow prototype. It does not connect to real customer data, ticket systems, or production monitoring systems by default. Before using it in a business environment, add authentication, authorization, audit logs, data masking, monitoring, evaluation datasets, and persistent storage.
 
 ## Roadmap
 
-- Connect to real vector database
-- Integrate with ticket systems
-- Add authentication
+- Connect to enterprise ticket systems
+- Add multi-tenant knowledge base isolation
+- Add authentication and role-based access control
 - Add observability metrics
-- Add multi-tenant knowledge base
-- Add evaluation dataset for support answers
-- Add web UI
+- Add RAG answer evaluation
+- Add feedback-driven knowledge base updates
+- Add conversation history and ticket context memory

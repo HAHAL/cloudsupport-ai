@@ -1,4 +1,5 @@
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -74,12 +75,14 @@ class RAGService:
 
         self.classifier = QuestionClassifier()
         self.prompt_manager = PromptManager()
-        self.embeddings = self._build_embeddings()
-        self.llm = self._build_llm()
-        self.vector_store = self._build_vector_store()
+        self.provider_ready = self._provider_is_ready()
+        self.embeddings = self._build_embeddings() if self.provider_ready else None
+        self.llm = self._build_llm() if self.provider_ready else None
+        self.vector_store = self._build_vector_store() if self.provider_ready else None
 
-        # Build the vector index lazily on first startup if Chroma is empty.
-        self.ensure_index()
+        # Build the vector index lazily only when an external provider is configured.
+        if self.vector_store is not None:
+            self.ensure_index()
 
     def answer(self, question: str, top_k: int | None = None) -> dict[str, Any]:
         """Retrieve related chunks and generate an LLM answer."""
@@ -100,6 +103,9 @@ class RAGService:
                     "has_context": False,
                 },
             }
+
+        if self.llm is None:
+            return self._fallback_answer(question, category, retrieved_chunks, top_k=top_k)
 
         context = self._format_context(retrieved_chunks)
         chain = self.prompt_manager.support_qa_prompt() | self.llm
@@ -127,6 +133,9 @@ class RAGService:
 
     def ensure_index(self) -> None:
         """Create Chroma vectors from local files when the collection is empty."""
+        if self.vector_store is None:
+            return
+
         existing = self.vector_store.get(limit=1)
         if existing.get("ids"):
             return
@@ -157,6 +166,7 @@ class RAGService:
 
         documents: list[Document] = []
         supported_files = [
+            *self.knowledge_dir.rglob("*.md"),
             *self.knowledge_dir.rglob("*.txt"),
             *self.knowledge_dir.rglob("*.pdf"),
         ]
@@ -200,6 +210,9 @@ class RAGService:
         k = top_k or self.top_k
         category = category or self.classifier.classify(query)
 
+        if self.vector_store is None:
+            return self._keyword_retrieve(query, top_k=k, category=category)
+
         if category != QuestionCategory.OTHER:
             docs_with_scores = self.vector_store.similarity_search_with_score(
                 query,
@@ -216,7 +229,7 @@ class RAGService:
         """Load one txt or pdf file using the matching LangChain loader."""
         suffix = file_path.suffix.lower()
 
-        if suffix == ".txt":
+        if suffix in {".md", ".txt"}:
             loader = TextLoader(str(file_path), encoding="utf-8")
             return loader.load()
 
@@ -228,6 +241,9 @@ class RAGService:
 
     def _build_vector_store(self) -> Chroma:
         """Create a persistent Chroma vector store."""
+        if self.embeddings is None:
+            raise RuntimeError("Embedding provider is not configured")
+
         return Chroma(
             collection_name=self.collection_name,
             embedding_function=self.embeddings,
@@ -246,7 +262,7 @@ class RAGService:
             QuestionCategory.HTTPS: {"https", "ssl", "tls"},
             QuestionCategory.VIDEO_PLAYBACK: {"video", "视频播放", "playback"},
             QuestionCategory.KUBERNETES: {"kubernetes", "k8s"},
-            QuestionCategory.OTHER: {"general", "other", "其他"},
+            QuestionCategory.OTHER: {"llm", "general", "other", "其他"},
         }
         for category, aliases in path_aliases.items():
             if aliases & path_parts:
@@ -297,6 +313,97 @@ class RAGService:
             }
             for chunk in chunks
         ]
+
+    def _fallback_answer(
+        self,
+        question: str,
+        category: QuestionCategory,
+        retrieved_chunks: list[RetrievedChunk],
+        top_k: int | None = None,
+    ) -> dict[str, Any]:
+        context_preview = "\n\n".join(
+            f"- 来源：{chunk.source}\n  摘要：{chunk.content[:260]}"
+            for chunk in retrieved_chunks[:3]
+        )
+        answer = (
+            f"当前问题已识别为 {category.value} 类支持问题。系统已从本地 Markdown 知识库中检索到相关内容，"
+            "但当前未配置外部 LLM 或 Embedding API Key，因此返回规则兜底分析。\n\n"
+            "建议处理方式：\n"
+            "1. 先确认问题影响范围、发生时间、客户环境和复现步骤。\n"
+            "2. 根据参考来源中的排障步骤收集 request ID、日志、状态码、请求参数和响应头。\n"
+            "3. 如果涉及 5xx、持续超时、权限异常或业务中断，整理升级摘要后提交给对应支持团队。\n\n"
+            f"参考知识库片段：\n{context_preview}"
+        )
+        return {
+            "question": question,
+            "category": category.value,
+            "answer": answer,
+            "retrieved_contents": [chunk.to_dict() for chunk in retrieved_chunks],
+            "references": self._format_references(retrieved_chunks),
+            "metadata": {
+                "chunk_size": self.chunk_size,
+                "chunk_overlap": self.chunk_overlap,
+                "retrieval_top_k": top_k or self.top_k,
+                "has_context": True,
+                "mode": "local_keyword_fallback",
+            },
+        }
+
+    def _keyword_retrieve(
+        self,
+        query: str,
+        top_k: int | None = None,
+        category: QuestionCategory | None = None,
+    ) -> list[RetrievedChunk]:
+        documents = self.load_documents()
+        if not documents:
+            return []
+
+        category_value = category.value if category else None
+        query_terms = {
+            term.lower()
+            for term in re.split(r"[\s,，。；;:/?&=_\-]+", query)
+            if len(term.strip()) >= 2
+        }
+        scored: list[tuple[int, Document]] = []
+        for doc in documents:
+            if category_value and category_value != QuestionCategory.OTHER.value:
+                if doc.metadata.get("category") != category_value:
+                    continue
+            content = doc.page_content.lower()
+            score = sum(1 for term in query_terms if term in content)
+            if score > 0:
+                scored.append((score, doc))
+
+        if not scored and category_value and category_value != QuestionCategory.OTHER.value:
+            return self._keyword_retrieve(query, top_k=top_k, category=QuestionCategory.OTHER)
+
+        scored.sort(key=lambda item: item[0], reverse=True)
+        chunks = []
+        for score, doc in scored[: top_k or self.top_k]:
+            source = str(doc.metadata.get("source", "unknown"))
+            chunks.append(
+                RetrievedChunk(
+                    content=doc.page_content,
+                    source=source,
+                    category=str(doc.metadata.get("category", QuestionCategory.OTHER.value)),
+                    score=float(score),
+                )
+            )
+        return chunks
+
+    @staticmethod
+    def _provider_is_ready() -> bool:
+        provider = os.getenv("LLM_PROVIDER", "openai").lower()
+        embedding_provider = os.getenv("EMBEDDING_PROVIDER", provider).lower()
+
+        llm_key = bool(os.getenv("DASHSCOPE_API_KEY")) if provider == "qwen" else bool(os.getenv("OPENAI_API_KEY"))
+        embedding_key = (
+            bool(os.getenv("DASHSCOPE_API_KEY"))
+            if embedding_provider == "qwen"
+            else bool(os.getenv("OPENAI_API_KEY"))
+        )
+        return llm_key and embedding_key
 
     @staticmethod
     def _build_embeddings():  # type: ignore[no-untyped-def]

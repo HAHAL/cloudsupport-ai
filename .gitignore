@@ -12,6 +12,7 @@ env/
 
 chroma_data/
 chroma_db/
+feedback/
 
 *.log
 
