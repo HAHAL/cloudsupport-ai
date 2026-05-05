@@ -76,6 +76,7 @@ http://localhost:8000/
 The Web Console supports:
 
 - Knowledge base Q&A
+- Knowledge status, document versions, chunk preview, and retrieval testing
 - Ticket triage
 - API error analysis
 - Log analysis
@@ -129,6 +130,12 @@ curl -f http://127.0.0.1:8000/health
 | `/ticket-reply` | POST | Customer reply draft generation |
 | `/escalation-info` | POST | Escalation information collection |
 | `/feedback` | POST | Answer feedback tracking |
+| `/knowledge/status` | GET | View knowledge base status |
+| `/knowledge/versions` | GET | View document versions |
+| `/knowledge/reindex` | POST | Rebuild the knowledge index |
+| `/knowledge/search` | POST | Search the knowledge base |
+| `/knowledge/preview-chunks` | POST | Preview document chunks |
+| `/knowledge/deprecate` | POST | Mark a document version as deprecated |
 | `/docs` | GET | Swagger API documentation |
 
 ## API Examples
@@ -186,17 +193,24 @@ curl -X POST http://localhost:8000/log-analyze \
 Rule-based workflows do not require external credentials. Full RAG behavior can be enabled with a configured model provider:
 
 ```env
-LLM_PROVIDER=openai
-EMBEDDING_PROVIDER=openai
-OPENAI_API_KEY=your_openai_key
+LLM_PROVIDER=rule
+EMBEDDING_PROVIDER=local
+OPENAI_API_KEY=
+DASHSCOPE_API_KEY=
 
-# Or Qwen / DashScope OpenAI-compatible endpoint
-# LLM_PROVIDER=qwen
-# EMBEDDING_PROVIDER=qwen
-# DASHSCOPE_API_KEY=your_dashscope_key
+CHUNK_SIZE=800
+CHUNK_OVERLAP=120
+RAG_TOP_K=4
+CHROMA_DIR=chroma_data
+CHROMA_COLLECTION=cloudsupport_kb
+
+# Optional external provider configuration:
+# LLM_PROVIDER=openai
+# EMBEDDING_PROVIDER=openai
+# OPENAI_API_KEY=your_openai_key
 ```
 
-Never commit real API keys or `.env` files to the repository.
+By default, the project uses `keyword_fallback` mode without external keys. When an embedding provider is configured, documents can be indexed into Chroma for vector search. Never commit real API keys or `.env` files to the repository.
 
 ## Knowledge Base
 
@@ -231,6 +245,51 @@ knowledge/
 ```
 
 The repository still keeps some historical knowledge files. They can be gradually migrated into the general enterprise support structure above.
+
+## Knowledge Base and RAG Flow
+
+CloudSupport AI loads local Markdown, TXT, and PDF files. It parses YAML Front Matter metadata, splits documents into chunks, supports keyword fallback retrieval by default, and can optionally write chunks into Chroma when an embedding provider is configured.
+
+```text
+Knowledge Files
+        ↓
+Metadata Parsing
+        ↓
+Recursive Chunk Split
+        ↓
+Keyword Fallback / Chroma Vector Search
+        ↓
+Prompt Context Assembly
+        ↓
+Structured Answer + References
+```
+
+## Knowledge Version Management
+
+Markdown files can define metadata through YAML Front Matter:
+
+```markdown
+---
+doc_id: api-rate-limit-errors
+title: API Rate Limit Troubleshooting
+version: v1.2.0
+status: active
+owner: support-team
+effective_from: 2026-05-01
+deprecated_at:
+tags:
+  - api
+  - rate-limit
+  - 429
+---
+```
+
+The system uses `active`, `deprecated`, and `draft` states:
+
+- `active` documents are used by default for search and answers.
+- `deprecated` documents are excluded by default and can be inspected with `include_deprecated=true`.
+- `draft` documents are listed for visibility but are not used by default for retrieval or reindexing.
+- Each chunk carries metadata such as `doc_id`, `version`, `status`, `source`, `chunk_id`, `content_hash`, and `document_hash`.
 
 ## Project Structure
 
@@ -338,9 +397,16 @@ To be added.
 6. Run login 403 ticket triage.
 7. Generate a customer reply draft.
 8. Run knowledge base Q&A.
-9. Collect escalation information.
-10. Submit `useful` / `not_useful` feedback.
-11. Review GitHub Actions CI/CD workflows.
+9. View knowledge base status.
+10. View document versions.
+11. Preview document chunks.
+12. Test knowledge retrieval.
+13. Enable `include_deprecated` to compare historical knowledge.
+14. Rebuild the knowledge index.
+15. Run knowledge base Q&A again.
+16. Collect escalation information.
+17. Submit `useful` / `not_useful` feedback.
+18. Review GitHub Actions CI/CD workflows.
 
 ## Feedback
 

@@ -1,3 +1,17 @@
+---
+doc_id: api-rate-limit-errors
+title: API 限流错误排查
+version: v1.2.0
+status: active
+owner: support-team
+effective_from: 2026-05-01
+deprecated_at:
+tags:
+  - api
+  - rate-limit
+  - 429
+---
+
 # API Rate Limit Errors
 
 ## Scenario

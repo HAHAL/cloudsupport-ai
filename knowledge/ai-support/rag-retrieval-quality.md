@@ -1,3 +1,18 @@
+---
+doc_id: rag-retrieval-quality
+title: RAG 检索质量排查
+version: v1.0.0
+status: active
+owner: ai-support-team
+effective_from: 2026-05-01
+deprecated_at:
+tags:
+  - ai-support
+  - rag
+  - retrieval
+  - knowledge-base
+---
+
 # RAG Retrieval Quality
 
 ## Scenario

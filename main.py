@@ -37,6 +37,17 @@ class Reference(BaseModel):
     score: float | None = None
     page: int | None = None
     content_preview: str
+    doc_id: str | None = None
+    title: str | None = None
+    version: str | None = None
+    status: str | None = None
+    chunk_index: int | None = None
+    chunk_id: str | None = None
+    content_hash: str | None = None
+    document_hash: str | None = None
+    effective_from: str | None = None
+    deprecated_at: str | None = None
+    tags: str | None = None
 
 
 class RetrievedContent(BaseModel):
@@ -45,6 +56,14 @@ class RetrievedContent(BaseModel):
     category: str
     score: float | None = None
     page: int | None = None
+    doc_id: str | None = None
+    title: str | None = None
+    version: str | None = None
+    status: str | None = None
+    chunk_index: int | None = None
+    chunk_id: str | None = None
+    content_hash: str | None = None
+    document_hash: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -176,6 +195,30 @@ class FeedbackResponse(BaseModel):
     received_at: str
 
 
+class KnowledgeReindexRequest(BaseModel):
+    force: bool = Field(False, description="是否尝试重建向量集合")
+
+
+class PreviewChunksRequest(BaseModel):
+    text: str | None = Field(None, description="用于切分预览的文本")
+    file_path: str | None = Field(None, description="knowledge 目录下的文件路径")
+    chunk_size: int | None = Field(None, ge=100, description="切分大小")
+    chunk_overlap: int | None = Field(None, ge=0, description="切分重叠")
+
+
+class KnowledgeSearchRequest(BaseModel):
+    query: str = Field(..., min_length=1, description="检索问题")
+    top_k: int | None = Field(None, ge=1, le=20, description="返回数量")
+    include_deprecated: bool = Field(False, description="是否包含 deprecated 历史知识")
+
+
+class KnowledgeDeprecateRequest(BaseModel):
+    doc_id: str = Field(..., min_length=1)
+    version: str = Field(..., min_length=1)
+    deprecated_at: str | None = None
+    reason: str | None = None
+
+
 STATUS_CODE_KNOWLEDGE: dict[int, dict[str, Any]] = {
     400: {
         "type": "bad_request",
@@ -286,6 +329,58 @@ def chat(payload: ChatRequest) -> ChatResponse:
                 "reason": "RAG provider is not configured or temporarily unavailable",
             },
         )
+
+
+@app.get("/knowledge/status")
+def knowledge_status() -> dict[str, Any]:
+    return get_rag_service().knowledge_status()
+
+
+@app.get("/knowledge/versions")
+def knowledge_versions() -> dict[str, Any]:
+    return get_rag_service().list_versions()
+
+
+@app.post("/knowledge/reindex")
+def knowledge_reindex(payload: KnowledgeReindexRequest) -> dict[str, Any]:
+    return get_rag_service().reindex(force=payload.force)
+
+
+@app.post("/knowledge/preview-chunks")
+def knowledge_preview_chunks(payload: PreviewChunksRequest) -> dict[str, Any]:
+    try:
+        return get_rag_service().preview_chunks(
+            text=payload.text,
+            file_path=payload.file_path,
+            chunk_size=payload.chunk_size,
+            chunk_overlap=payload.chunk_overlap,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/knowledge/search")
+def knowledge_search(payload: KnowledgeSearchRequest) -> dict[str, Any]:
+    return get_rag_service().search(
+        query=payload.query,
+        top_k=payload.top_k,
+        include_deprecated=payload.include_deprecated,
+    )
+
+
+@app.post("/knowledge/deprecate")
+def knowledge_deprecate(payload: KnowledgeDeprecateRequest) -> dict[str, Any]:
+    try:
+        return get_rag_service().deprecate_document(
+            doc_id=payload.doc_id,
+            version=payload.version,
+            deprecated_at=payload.deprecated_at,
+            reason=payload.reason,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.post("/ticket-triage", response_model=TicketTriageResponse)

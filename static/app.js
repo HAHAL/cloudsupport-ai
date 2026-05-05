@@ -88,6 +88,57 @@ const workflows = {
       { name: "business_impact", label: "业务影响", value: "Production workflow is delayed for multiple enterprise users." },
     ],
   },
+  knowledgeStatus: {
+    label: "知识库状态",
+    endpoint: "/knowledge/status",
+    method: "GET",
+    fields: [],
+  },
+  knowledgeVersions: {
+    label: "文档版本列表",
+    endpoint: "/knowledge/versions",
+    method: "GET",
+    fields: [],
+  },
+  knowledgeReindex: {
+    label: "重建知识库索引",
+    endpoint: "/knowledge/reindex",
+    fields: [{ name: "force", label: "强制重建", type: "checkbox", value: true }],
+  },
+  previewChunks: {
+    label: "文档切分预览",
+    endpoint: "/knowledge/preview-chunks",
+    fields: [
+      {
+        name: "text",
+        label: "预览文本",
+        type: "textarea",
+        value: "这里是一段用于测试文档切分的企业技术支持知识内容。它包含 API 报错、权限异常、日志分析和升级信息收集等场景。",
+      },
+      { name: "file_path", label: "知识库文件路径", value: "knowledge/ai-support/rag-retrieval-quality.md" },
+      { name: "chunk_size", label: "chunk_size", value: "800", number: true },
+      { name: "chunk_overlap", label: "chunk_overlap", value: "120", number: true },
+    ],
+  },
+  knowledgeSearch: {
+    label: "知识库检索测试",
+    endpoint: "/knowledge/search",
+    fields: [
+      { name: "query", label: "检索问题", value: "企业知识库问答结果不准确，应该如何排查？" },
+      { name: "top_k", label: "top_k", value: "4", number: true },
+      { name: "include_deprecated", label: "包含 deprecated 历史知识", type: "checkbox", value: false },
+    ],
+  },
+  knowledgeDeprecate: {
+    label: "标记知识废弃",
+    endpoint: "/knowledge/deprecate",
+    fields: [
+      { name: "doc_id", label: "doc_id", value: "api-rate-limit-errors" },
+      { name: "version", label: "version", value: "v1.0.0" },
+      { name: "deprecated_at", label: "deprecated_at", value: "2026-05-01" },
+      { name: "reason", label: "reason", value: "Replaced by v1.2.0" },
+    ],
+  },
 };
 
 const fieldLabels = {
@@ -141,6 +192,36 @@ const fieldLabels = {
   reason: "判断依据",
   impact_scope: "影响范围",
   status_code_explanation: "状态码解释",
+  knowledge_dir: "知识库目录",
+  vector_store: "向量库",
+  chroma_dir: "Chroma 目录",
+  collection: "Collection",
+  chunk_size: "chunk_size",
+  chunk_overlap: "chunk_overlap",
+  top_k: "top_k",
+  provider_ready: "provider_ready",
+  mode: "当前模式",
+  document_count: "文档总数",
+  active_count: "active 数量",
+  deprecated_count: "deprecated 数量",
+  draft_count: "draft 数量",
+  supported_file_types: "支持文件类型",
+  indexed_status: "索引状态",
+  message: "说明",
+  documents: "文档列表",
+  owner: "维护团队",
+  effective_from: "生效日期",
+  deprecated_at: "废弃日期",
+  document_hash: "文档 Hash",
+  content_hash: "内容 Hash",
+  chunk_count: "chunk 数量",
+  chunks: "切分结果",
+  chunk_id: "chunk ID",
+  length: "长度",
+  content_preview: "内容预览",
+  include_deprecated: "包含历史知识",
+  results: "检索结果",
+  new_status: "新状态",
 };
 
 let currentWorkflow = "chat";
@@ -185,13 +266,18 @@ function renderFields() {
     label.htmlFor = field.name;
     fields.appendChild(label);
 
-    const input = document.createElement(field.type === "textarea" ? "textarea" : "input");
-    input.id = field.name;
-    input.name = field.name;
-    input.value = field.value || "";
-    if (field.number) input.type = "number";
-    fields.appendChild(input);
-  });
+          const input = document.createElement(field.type === "textarea" ? "textarea" : "input");
+          input.id = field.name;
+          input.name = field.name;
+          if (field.type === "checkbox") {
+            input.type = "checkbox";
+            input.checked = Boolean(field.value);
+          } else {
+            input.value = field.value || "";
+          }
+          if (field.number) input.type = "number";
+          fields.appendChild(input);
+        });
 }
 
 function renderEmptyState() {
@@ -204,7 +290,12 @@ function renderEmptyState() {
 function collectPayload() {
   const payload = {};
   workflows[currentWorkflow].fields.forEach((field) => {
-    const value = document.getElementById(field.name).value.trim();
+    const element = document.getElementById(field.name);
+    if (field.type === "checkbox") {
+      payload[field.name] = element.checked;
+      return;
+    }
+    const value = element.value.trim();
     if (!value) return;
     payload[field.name] = field.number ? Number(value) : value;
   });
@@ -226,6 +317,20 @@ async function postJson(endpoint, payload) {
   return response.json();
 }
 
+async function requestWorkflow(workflow, payload) {
+  if (workflow.method === "GET") {
+    const response = await fetch(workflow.endpoint);
+    if (!response.ok) {
+      const errorText = await response.text();
+      const error = new Error(errorText || "请求失败");
+      error.status = response.status;
+      throw error;
+    }
+    return response.json();
+  }
+  return postJson(workflow.endpoint, payload);
+}
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   submitButton.disabled = true;
@@ -236,7 +341,7 @@ form.addEventListener("submit", async (event) => {
   try {
     const workflow = workflows[currentWorkflow];
     const payload = collectPayload();
-    lastResult = await postJson(workflow.endpoint, payload);
+    lastResult = await requestWorkflow(workflow, payload);
     rawJsonOpen = false;
     renderReport(currentWorkflow, lastResult);
   } catch (error) {
@@ -278,6 +383,12 @@ function normalizeResult(workflowKey, data) {
     logAnalyze: normalizeLogAnalyze,
     reply: normalizeReply,
     escalation: normalizeEscalation,
+    knowledgeStatus: normalizeKnowledgeStatus,
+    knowledgeVersions: normalizeKnowledgeVersions,
+    knowledgeReindex: normalizeKnowledgeReindex,
+    previewChunks: normalizePreviewChunks,
+    knowledgeSearch: normalizeKnowledgeSearch,
+    knowledgeDeprecate: normalizeKnowledgeDeprecate,
   };
   return (builders[workflowKey] || genericModel)(workflowKey, data);
 }
@@ -440,6 +551,131 @@ function normalizeEscalation(_, data) {
   };
 }
 
+function normalizeKnowledgeStatus(_, data) {
+  return {
+    title: "知识库状态报告",
+    summaryItems: [
+      ["知识库目录", data.knowledge_dir],
+      ["当前模式", data.mode],
+      ["文档总数", data.document_count],
+      ["provider_ready", String(data.provider_ready)],
+    ],
+    sections: [
+      {
+        title: "知识库状态",
+        content: compactObject({
+          knowledge_dir: data.knowledge_dir,
+          vector_store: data.vector_store,
+          chroma_dir: data.chroma_dir,
+          collection: data.collection,
+          chunk_size: data.chunk_size,
+          chunk_overlap: data.chunk_overlap,
+          top_k: data.top_k,
+          provider_ready: String(data.provider_ready),
+          mode: data.mode,
+          document_count: data.document_count,
+          active_count: data.active_count,
+          deprecated_count: data.deprecated_count,
+          draft_count: data.draft_count,
+          indexed_status: data.indexed_status,
+          message: data.message,
+        }),
+        type: "kv",
+      },
+      { title: "支持文件类型", content: data.supported_file_types, type: "list" },
+    ],
+  };
+}
+
+function normalizeKnowledgeVersions(_, data) {
+  return {
+    title: "文档版本列表",
+    summaryItems: [
+      ["文档总数", data.document_count],
+      ["active 数量", data.active_count],
+      ["deprecated 数量", data.deprecated_count],
+      ["draft 数量", data.draft_count],
+    ],
+    sections: [
+      { title: "文档版本", content: data.documents || [], type: "records" },
+    ],
+  };
+}
+
+function normalizeKnowledgeReindex(_, data) {
+  return {
+    title: "知识库重建结果",
+    summaryItems: [
+      ["状态", data.status],
+      ["当前模式", data.mode],
+      ["chunk 数量", data.chunk_count],
+      ["provider_ready", String(data.provider_ready)],
+    ],
+    sections: [
+      {
+        title: "重建结果",
+        content: compactObject({
+          document_count: data.document_count,
+          active_count: data.active_count,
+          deprecated_count: data.deprecated_count,
+          draft_count: data.draft_count,
+          chunk_count: data.chunk_count,
+          chunk_size: data.chunk_size,
+          chunk_overlap: data.chunk_overlap,
+          indexed_status: data.indexed_status,
+          message: data.message,
+        }),
+        type: "kv",
+      },
+    ],
+  };
+}
+
+function normalizePreviewChunks(_, data) {
+  return {
+    title: "文档切分预览",
+    summaryItems: [
+      ["chunk_size", data.chunk_size],
+      ["chunk_overlap", data.chunk_overlap],
+      ["chunk 数量", data.chunk_count],
+    ],
+    sections: [
+      { title: "切分结果", content: data.chunks || [], type: "records" },
+    ],
+  };
+}
+
+function normalizeKnowledgeSearch(_, data) {
+  return {
+    title: "知识库检索测试报告",
+    summaryItems: [
+      ["当前模式", data.mode],
+      ["top_k", data.top_k],
+      ["包含历史知识", String(data.include_deprecated)],
+      ["结果数量", (data.results || []).length],
+    ],
+    sections: [
+      { title: "检索问题", content: data.query, type: "text" },
+      { title: "检索结果", content: data.results || [], type: "records" },
+    ],
+  };
+}
+
+function normalizeKnowledgeDeprecate(_, data) {
+  return {
+    title: "知识版本状态更新",
+    summaryItems: [
+      ["doc_id", data.doc_id],
+      ["version", data.version],
+      ["新状态", data.new_status],
+      ["废弃日期", data.deprecated_at],
+    ],
+    sections: [
+      { title: "更新结果", content: data, type: "kv" },
+    ],
+  };
+}
+
 function genericModel(workflowKey, titleText, data) {
   return {
     title: workflows[workflowKey]?.label || "诊断报告",
@@ -477,10 +713,22 @@ function renderSection(section) {
 function renderContent(content, type = "auto") {
   if (!hasContent(content)) return node("div", "result-text-block", "暂无内容");
   if (type === "references") return renderReferences(content);
+  if (type === "records") return renderRecords(content);
   if (type === "kv") return renderKeyValues(content);
   if (type === "list" || Array.isArray(content)) return renderList(content);
   if (typeof content === "object") return renderKeyValues(content);
   return node("div", "result-text-block", String(content));
+}
+
+function renderRecords(items) {
+  const values = Array.isArray(items) ? items : [items];
+  const wrapper = node("div", "result-section");
+  values.filter(hasContent).forEach((item) => {
+    const card = node("div", "result-text-block");
+    card.appendChild(renderKeyValues(item));
+    wrapper.appendChild(card);
+  });
+  return wrapper.children.length ? wrapper : node("div", "result-text-block", "暂无记录");
 }
 
 function renderKeyValues(obj) {
@@ -663,6 +911,7 @@ function looksLikeBadge(text, key) {
     ["priority", "severity", "risk_level", "status_code"].includes(key) ||
     /^p[0-3]$/.test(value) ||
     ["high", "medium", "low", "critical", "useful", "not_useful"].includes(value) ||
+    ["active", "deprecated", "draft", "chroma", "keyword_fallback"].includes(value) ||
     /^(401|403|429|500|502|503|504)$/.test(value)
   );
 }

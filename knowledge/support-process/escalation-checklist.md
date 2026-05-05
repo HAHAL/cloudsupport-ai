@@ -1,3 +1,17 @@
+---
+doc_id: escalation-checklist
+title: 升级信息收集清单
+version: v1.0.0
+status: active
+owner: support-operations
+effective_from: 2026-05-01
+deprecated_at:
+tags:
+  - support-process
+  - escalation
+  - required-information
+---
+
 # Escalation Checklist
 
 ## Scenario

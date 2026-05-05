@@ -127,6 +127,7 @@ http://localhost:8000/
 Web 控制台支持：
 
 - 企业知识库问答
+- 知识库状态、版本列表、文档切分预览和检索测试
 - 工单分诊
 - API 报错分析
 - 日志分析
@@ -154,6 +155,12 @@ http://localhost:8000/docs
 | `/ticket-reply` | POST | 客户回复草稿生成 |
 | `/escalation-info` | POST | 升级信息收集 |
 | `/feedback` | POST | 回答反馈记录 |
+| `/knowledge/status` | GET | 查看知识库状态 |
+| `/knowledge/versions` | GET | 查看文档版本 |
+| `/knowledge/reindex` | POST | 重建知识库索引 |
+| `/knowledge/search` | POST | 检索知识库 |
+| `/knowledge/preview-chunks` | POST | 预览文档切分结果 |
+| `/knowledge/deprecate` | POST | 标记文档版本为 deprecated |
 | `/docs` | GET | Swagger API 文档 |
 
 ### API 示例
@@ -206,6 +213,18 @@ curl -X POST http://localhost:8000/log-analyze \
   }'
 ```
 
+知识库检索测试：
+
+```bash
+curl -X POST http://localhost:8000/knowledge/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "企业知识库问答结果不准确，应该如何排查？",
+    "top_k": 4,
+    "include_deprecated": false
+  }'
+```
+
 ## 知识库结构
 
 推荐将企业知识库整理为以下通用结构：
@@ -245,6 +264,69 @@ knowledge/
 - Docker 部署、反向代理和数据库连接异常。
 - AI 应用中的 RAG 检索质量、Prompt 优化、幻觉控制和 LLM API 错误。
 - 工单分诊、客户回复模板和升级检查清单。
+
+## 知识库与 RAG 流程
+
+CloudSupport AI 的知识库基于本地 Markdown、TXT 和 PDF 文件。系统支持文档加载、YAML Front Matter 元数据解析、文档切分、检索测试和可选 Chroma 向量索引。
+
+默认情况下，如果没有配置外部 Embedding 或 LLM Key，系统使用关键词 fallback 检索，仍可完成知识库问答、切分预览和参考来源返回。配置外部 Embedding Provider 后，可将知识库文档切分后写入 Chroma，启用 Top-K 相似度检索。
+
+```text
+Knowledge Files
+        ↓
+Metadata Parsing
+        ↓
+Recursive Chunk Split
+        ↓
+Keyword Fallback / Chroma Vector Search
+        ↓
+Prompt Context Assembly
+        ↓
+Structured Answer + References
+```
+
+## 知识库版本管理
+
+Markdown 文档可以通过 YAML Front Matter 管理知识元数据，包括 `doc_id`、`version`、`status`、`effective_from`、`deprecated_at` 和 `tags`。文档切分后，每个 chunk 会继承这些 metadata，并额外生成 `chunk_id`、`chunk_index`、`content_hash` 和 `document_hash`，用于检索结果展示、内容变更判断和后续增量索引扩展。
+
+元数据示例：
+
+```markdown
+---
+doc_id: api-rate-limit-errors
+title: API 限流错误排查
+version: v1.2.0
+status: active
+owner: support-team
+effective_from: 2026-05-01
+deprecated_at:
+tags:
+  - api
+  - rate-limit
+  - 429
+---
+```
+
+如果文档没有 Front Matter，系统会根据文件路径生成默认 metadata：`doc_id` 来自路径，`title` 使用文件名，`version` 默认为 `v1.0.0`，`status` 默认为 `active`，`owner` 默认为 `unknown`，`tags` 根据目录推断。
+
+## 新旧知识处理策略
+
+- 新知识使用 `status=active`，默认参与检索和问答。
+- 旧知识使用 `status=deprecated`，默认不参与检索，仅在 `include_deprecated=true` 时返回，并在结果中明确显示状态。
+- 草稿知识使用 `status=draft`，默认不参与检索和 reindex，只在版本列表中展示。
+- `/chat`、`/knowledge/search` 和 `/knowledge/reindex` 默认只使用 active 文档，避免旧知识污染回答。
+- `document_hash` 用于判断整篇文档变化，`content_hash` 用于判断 chunk 内容变化。
+- 当前实现以轻量级全量重建和本地状态覆盖为主，后续可扩展为增量索引、版本回滚和审批发布流程。
+
+## 文档切分参数
+
+| 环境变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `CHUNK_SIZE` | `800` | 单个 chunk 的目标长度 |
+| `CHUNK_OVERLAP` | `120` | 相邻 chunk 的重叠长度 |
+| `RAG_TOP_K` | `4` | 默认检索返回数量 |
+| `CHROMA_DIR` | `chroma_data` | Chroma 本地存储目录 |
+| `CHROMA_COLLECTION` | `cloudsupport_kb` | Chroma collection 名称 |
 
 ## 快速开始
 
@@ -310,17 +392,24 @@ Docker Compose 默认映射端口 `8000:8000`，并挂载：
 规则兜底接口和 Web 控制台不需要外部模型 Key。完整 RAG 回答可按需配置模型服务：
 
 ```env
-LLM_PROVIDER=openai
-EMBEDDING_PROVIDER=openai
-OPENAI_API_KEY=your_openai_key
+LLM_PROVIDER=rule
+EMBEDDING_PROVIDER=local
+OPENAI_API_KEY=
+DASHSCOPE_API_KEY=
 
-# 或使用通义千问 / DashScope OpenAI-compatible endpoint
-# LLM_PROVIDER=qwen
-# EMBEDDING_PROVIDER=qwen
-# DASHSCOPE_API_KEY=your_dashscope_key
+CHUNK_SIZE=800
+CHUNK_OVERLAP=120
+RAG_TOP_K=4
+CHROMA_DIR=chroma_data
+CHROMA_COLLECTION=cloudsupport_kb
+
+# 如需启用外部模型服务，可按需配置：
+# LLM_PROVIDER=openai
+# EMBEDDING_PROVIDER=openai
+# OPENAI_API_KEY=your_openai_key
 ```
 
-不要将真实 API Key 或 `.env` 文件提交到仓库。建议通过服务器环境变量、本地 `.env` 或 GitHub Actions Secrets 配置敏感信息。
+默认无 Key 模式走 `keyword_fallback`。配置 Embedding Provider 后，知识库可写入 Chroma 并启用向量检索。不要将真实 API Key 或 `.env` 文件提交到仓库。建议通过服务器环境变量、本地 `.env` 或 GitHub Actions Secrets 配置敏感信息。
 
 ## CI/CD 流程
 
@@ -390,9 +479,16 @@ MAX_RETRIES=30 SLEEP_SECONDS=3 ./scripts/health_check.sh
 6. 演示登录 403 工单分诊。
 7. 演示客户回复生成。
 8. 演示知识库问答。
-9. 演示升级信息收集。
-10. 提交 `useful` / `not_useful` 反馈。
-11. 查看 GitHub Actions CI/CD 流程。
+9. 查看知识库状态。
+10. 查看文档版本列表。
+11. 预览文档切分结果。
+12. 测试知识库检索。
+13. 勾选 `include_deprecated` 对比历史知识。
+14. 重建知识库索引。
+15. 再进行知识库问答。
+16. 演示升级信息收集。
+17. 提交 `useful` / `not_useful` 反馈。
+18. 查看 GitHub Actions CI/CD 流程。
 
 ## 项目截图
 
